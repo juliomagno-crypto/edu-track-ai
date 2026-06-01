@@ -1,52 +1,17 @@
 import pandas as pd
-import plotly.express as px
-import requests
+# Tirei a extensao a baixo pois nao estava funcionando no meu pc (ryan)
+# import plotly.express as px
 import streamlit as st
+import api
+import re
+import time
+import requests
 
-# ------------------------------------------------
-# CONFIGURAÇÃO DA API XANO
-# ------------------------------------------------
+def limpar_texto(texto):
 
-# Substitua pela SUA URL real do grupo de API no Xano
-BASE_URL = 'https://x8ki-letl-twmt.n7.xano.io/api:FzC8bz6B'
-
-# ------------------------------------------------
-# FUNÇÕES DE CONEXÃO E UTILITÁRIOS
-# ------------------------------------------------
-
-def get_headers():
-    '''
-    Gera o cabeçalho com o JSON Web Token (JWT) para autenticação segura.
-    '''
-    headers = {'Content-Type': 'application/json'}
-    if 'auth_token' in st.session_state:
-        headers['Authorization'] = f'Bearer {st.session_state.auth_token}'
-    return headers
-
-def api_get(endpoint):
-    '''
-    Lê dados do Xano (filtra automaticamente pelo usuário no servidor).
-    '''
-    resposta = requests.get(f'{BASE_URL}/{endpoint}', headers=get_headers())
-    return resposta.json() if resposta.status_code == 200 else []
-
-def api_post(endpoint, dados):
-    '''
-    Cria um novo registro vinculado ao aluno logado.
-    '''
-    return requests.post(f'{BASE_URL}/{endpoint}', json=dados, headers=get_headers())
-
-def api_patch(endpoint, id, dados):
-    '''
-    Atualiza um registro existente.
-    '''
-    return requests.patch(f'{BASE_URL}/{endpoint}/{id}', json=dados, headers=get_headers())
-
-def api_delete(endpoint, id):
-    '''
-    Remove um registro do banco de dados.
-    '''
-    return requests.delete(f'{BASE_URL}/{endpoint}/{id}', headers=get_headers())
+    if not texto:
+        return ""
+    return re.sub(r'\s+', ' ', texto).strip()
 
 # ------------------------------------------------
 # SISTEMA DE AUTENTICAÇÃO
@@ -54,10 +19,26 @@ def api_delete(endpoint, id):
 
 
 def valida_senha(senha):
-    if senha =="":
+    erros = []
+    if len(senha) < 8:
+        erros.append('A senha deve ter no mínimo 8 caracteres.')
+    if not any(char.isupper() for char in senha):
+        erros.append('A senha deve conter pelo menos uma letra maiúscula.')
+    if not any(char.islower() for char in senha):
+        erros.append('A senha deve conter pelo menos uma letra minúscula.')
+    if not any(char.isdigit() for char in senha):
+        erros.append('A senha deve conter pelo menos um número.')
+    if not any(not char.isalnum() for char in senha):
+        erros.append('A senha deve conter pelo menos um caractere especial.')
+    return erros
+
+def valida_email(email):
+    if email.count('@') != 1:
         return False
-    else:
-        return True
+    if '.' not in email:
+        return False
+    return True
+
 def tela_acesso():
     st.title('Portal Acadêmico Personalizado')
     tab_login, tab_cadastro = st.tabs(['Entrar', 'Criar Minha Conta'])
@@ -67,13 +48,22 @@ def tela_acesso():
             email = st.text_input('E-mail')
             senha = st.text_input('Senha', type='password')
             if st.form_submit_button('Acessar Meu Painel'):
-                res = requests.post(f'{BASE_URL}/auth/login', json={'email': email, 'password': senha})
-                if res.status_code == 200:
-                    st.session_state.auth_token = res.json().get('authToken')
-                    st.session_state.logged_in = True
-                    st.rerun()
+                if not valida_email(email):
+                    placeholder = st.empty()
+                    placeholder.error('E-mail inválido. Deve conter exatamente um "@" e pelo menos um ".".')
+                    time.sleep(10)
+                    placeholder.empty()
                 else:
-                    st.error('Credenciais inválidas.')
+                    res = requests.post(f'{api.BASE_URL}/auth/login', json={'email': email, 'password': senha})
+                    if res.status_code == 200:
+                        st.session_state.auth_token = res.json().get('authToken')
+                        st.session_state.logged_in = True
+                        st.rerun()
+                    else:
+                        placeholder = st.empty()
+                        placeholder.error('Credenciais inválidas.')
+                        time.sleep(10)
+                        placeholder.empty()
 
     with tab_cadastro:
         with st.form('cadastro_form'):
@@ -82,13 +72,33 @@ def tela_acesso():
             pass_c = st.text_input('Senha', type='password')
 
             if st.form_submit_button('Cadastrar'):
-                if not pass_c == valida_senha(pass_c):
-                    st.error('Erro ao cadastrar usuário: Necessário senha caralho ')
-                res = requests.post(f'{BASE_URL}/auth/signup', json={'name': nome, 'email': email_c, 'password': pass_c})
-                if res.status_code == 200:
-                    st.success('Conta criada! Agora faça o login.')
+                nome = limpar_texto(nome)
+                email_c = limpar_texto(email_c)
+                pass_c = limpar_texto(pass_c)
+
+                if not valida_email(email_c):
+                    placeholder_email = st.empty()
+                    placeholder_email.error('E-mail inválido. Deve conter exatamente um "@" e pelo menos um ".".')
+                    time.sleep(10)
+                    placeholder_email.empty()
                 else:
-                    st.error('Erro ao cadastrar usuário.')
+                    erros = valida_senha(pass_c)
+                    if erros:
+                        placeholder_erros = st.empty()
+                        with placeholder_erros.container():
+                            for erro in erros:
+                                st.error(erro)
+                        time.sleep(10)
+                        placeholder_erros.empty()
+                    else:
+                        res = requests.post(f'{api.BASE_URL}/auth/signup', json={'name': nome, 'email': email_c, 'password': pass_c})
+                        if res.status_code == 200:
+                            st.success('Conta criada! Agora faça o login.')
+                        else:
+                            placeholder_signup = st.empty()
+                            placeholder_signup.error('Erro ao cadastrar usuário.')
+                            time.sleep(10)
+                            placeholder_signup.empty()
 
 # ------------------------------------------------
 # MÓDULOS CRUD PARA PROFESSORES, DISCIPLINAS
@@ -104,11 +114,11 @@ def modulo_professores():
         nome = st.text_input('Nome do Professor')
         email = st.text_input('E-mail de Contato')
         if st.button('Cadastrar Professor'):
-            api_post('professores', {'nome': nome, 'email': email})
+            api.api_post('professores', {'nome': nome, 'email': email})
             st.rerun()
 
     # [R]EAD & [U]PDATE & [D]ELETE
-    dados = api_get('professores')
+    dados = api.api_get('professores')
     if dados:
         df = pd.DataFrame(dados)
         st.subheader('Seus Professores Cadastrados')
@@ -118,7 +128,7 @@ def modulo_professores():
         if st.button('Salvar Alterações/Exclusões em Professores'):
             # Para simplificar, atualizamos o que foi alterado
             for _, row in df_editado.iterrows():
-                api_patch('professores', row['id'], {'nome': row['nome'], 'email': row['email']})
+                api.api_patch('professores', row['id'], {'nome': row['nome'], 'email': row['email']})
             st.success('Dados sincronizados!')
             st.rerun()
     else:
@@ -128,8 +138,8 @@ def modulo_professores():
 
 def modulo_disciplinas():
     st.header('Minhas Disciplina')
-    profs = api_get('professores')
-    
+    profs = api.api_get('professores')
+
     if not profs:
         st.warning('Cadastre um professor antes de criar disciplinas.')
         return
@@ -140,29 +150,29 @@ def modulo_disciplinas():
         opcoes_p = {p['nome']: p['id'] for p in profs}
         p_escolhido = st.selectbox('Professor Responsável', options=list(opcoes_p.keys()))
         if st.button('Salvar Disciplina'):
-            api_post('disciplinas', {'nome': nome_d, 'prof_id': opcoes_p[p_escolhido]})
+            api.api_post('disciplinas', {'nome': nome_d, 'prof_id': opcoes_p[p_escolhido]})
             st.rerun()
 
     # [R]EAD
-    discs = api_get('disciplinas')
+    discs = api.api_get('disciplinas')
     if discs:
         df_d = pd.DataFrame(discs)
         df_p = pd.DataFrame(profs)
         # Junta os nomes para exibição
         df_view = df_d.merge(df_p[['id', 'nome']], left_on='prof_id', right_on='id', suffixes=('', '_prof'))
-        st.dataframe(df_view[['id', 'nome', 'nome_prof']], use_container_width=True, hide_index=True)      
+        st.dataframe(df_view[['id', 'nome', 'nome_prof']], use_container_width=True, hide_index=True)
 
         # [D]ELETE
         id_del = st.number_input('ID para remover', min_value=1, step=1)
         if st.button('Remover Disciplina', type='primary'):
-            api_delete('disciplinas', id_del)
+            api.api_delete('disciplinas', id_del)
             st.rerun()
 
 # GESTÃO DE TAREFAS ---
 
 def modulo_tarefas():
     st.header('Minhas Tarefas e Notas')
-    discs = api_get('disciplinas')
+    discs = api.api_get('disciplinas')
 
     if not discs:
         st.warning('Cadastre uma disciplina primeiro.')
@@ -175,11 +185,11 @@ def modulo_tarefas():
         d_escolhida = st.selectbox('Selecione a Disciplina', options=list(opcoes_d.keys()))
         nota = st.number_input('Nota Obtida', 0.0, 10.0, 0.0)
         if st.button('Registrar Nota'):
-            api_post('tarefas', {'nome': nome_t, 'disc_id': opcoes_d[d_escolhida], 'nota': nota})
+            api.api_post('tarefas', {'nome': nome_t, 'disc_id': opcoes_d[d_escolhida], 'nota': nota})
             st.rerun()
-            
+
     # [R]EAD
-    tarefas = api_get('tarefas')
+    tarefas = api.api_get('tarefas')
     if tarefas:
         df_t = pd.DataFrame(tarefas)
         st.subheader('Quadro de Notas')
@@ -188,15 +198,15 @@ def modulo_tarefas():
         # [D]ELETE
         id_del_t = st.number_input('ID da Tarefa para remover', min_value=1, step=1)
         if st.button('Remover Tarefa'):
-            api_delete('tarefas', id_del_t)
+            api.api_delete('tarefas', id_del_t)
             st.rerun()
 
 # --- DASHBOARD ---
 
 def modulo_dashboard():
     st.header('Resumo de Desempenho')
-    tarefas = api_get('tarefas')
-    discs = api_get('disciplinas')
+    tarefas = api.api_get('tarefas')
+    discs = api.api_get('disciplinas')
     if not tarefas or not discs:
         st.info('Cadastre dados para visualizar seu desempenho gráfico.')
         return
@@ -204,7 +214,7 @@ def modulo_dashboard():
     df_t = pd.DataFrame(tarefas)
     df_d = pd.DataFrame(discs)
     df_plot = df_t.merge(df_d, left_on='disc_id', right_on='id', suffixes=('_t', '_d'))
-    fig = px.bar(df_plot, x='nome_t', y='nota', color='nome_d', 
+    fig = px.bar(df_plot, x='nome_t', y='nota', color='nome_d',
                  title='Minhas Notas por Matéria', text_auto=True)
     st.plotly_chart(fig, use_container_width=True)
 
