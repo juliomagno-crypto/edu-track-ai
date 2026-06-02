@@ -1,14 +1,33 @@
 import pandas as pd
 # Tirei a extensao a baixo pois nao estava funcionando no meu pc (ryan)
-# import plotly.express as px
+#import plotly.express as px
 import streamlit as st
+import streamlit.components.v1 as components
 import api
 import re
 import time
 import requests
+from datetime import datetime, timedelta
+
+def set_cookie(name, value, days=30):
+    dt = datetime.now() + timedelta(days=days)
+    expires = dt.strftime("%a, %d %b %Y %H:%M:%S GMT")
+    js_code = f"""
+        <script>
+        document.cookie = "{name}={value}; expires={expires}; path=/";
+        </script>
+    """
+    components.html(js_code, height=0)
+
+def delete_cookie(name):
+    js_code = f"""
+        <script>
+        document.cookie = "{name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+        </script>
+    """
+    components.html(js_code, height=0)
 
 def limpar_texto(texto):
-
     if not texto:
         return ""
     return re.sub(r'\s+', ' ', texto).strip()
@@ -16,7 +35,6 @@ def limpar_texto(texto):
 # ------------------------------------------------
 # SISTEMA DE AUTENTICAÇÃO
 # ------------------------------------------------
-
 
 def valida_senha(senha):
     erros = []
@@ -32,8 +50,22 @@ def valida_senha(senha):
         erros.append('A senha deve conter pelo menos um caractere especial.')
     return erros
 
+def valida_nome(nome):
+    erros = []
+    if len(nome) > 255:
+        erros.append('O nome não pode passar de 255 caracteres.')
+    espacos = nome.count(' ')
+    if espacos < 1:
+        erros.append('O nome deve conter pelo menos um sobrenome, coloque seu nome completo.')
+    if espacos > 15:
+        erros.append('O nome não pode conter mais de 15 espaços.')
+    return erros
+
 def valida_email(email):
     if email.count('@') != 1:
+        return False
+    # Garante que haja pelo menos 2 caracteres antes do @
+    if len(email.split('@')[0]) < 2:
         return False
     if '.' not in email:
         return False
@@ -50,14 +82,17 @@ def tela_acesso():
             if st.form_submit_button('Acessar Meu Painel'):
                 if not valida_email(email):
                     placeholder = st.empty()
-                    placeholder.error('E-mail inválido. Deve conter exatamente um "@" e pelo menos um ".".')
+                    placeholder.error('E-mail inválido. Deve conter pelo menos 2 caracteres antes do "@" e exatamente um "@"')
                     time.sleep(10)
                     placeholder.empty()
                 else:
                     res = requests.post(f'{api.BASE_URL}/auth/login', json={'email': email, 'password': senha})
                     if res.status_code == 200:
-                        st.session_state.auth_token = res.json().get('authToken')
+                        token = res.json().get('authToken')
+                        st.session_state.auth_token = token
                         st.session_state.logged_in = True
+                        st.session_state.login_time = datetime.now()
+                        set_cookie('auth_token', token)
                         st.rerun()
                     else:
                         placeholder = st.empty()
@@ -76,9 +111,17 @@ def tela_acesso():
                 email_c = limpar_texto(email_c)
                 pass_c = limpar_texto(pass_c)
 
-                if not valida_email(email_c):
+                erros_nome = valida_nome(nome)
+                if erros_nome:
+                    placeholder_nome = st.empty()
+                    with placeholder_nome.container():
+                        for erro in erros_nome:
+                            st.error(erro)
+                    time.sleep(10)
+                    placeholder_nome.empty()
+                elif not valida_email(email_c):
                     placeholder_email = st.empty()
-                    placeholder_email.error('E-mail inválido. Deve conter exatamente um "@" e pelo menos um ".".')
+                    placeholder_email.error('E-mail inválido. Deve conter pelo menos 2 caracteres antes do "@" e exatamente um "@"')
                     time.sleep(10)
                     placeholder_email.empty()
                 else:
@@ -214,9 +257,14 @@ def modulo_dashboard():
     df_t = pd.DataFrame(tarefas)
     df_d = pd.DataFrame(discs)
     df_plot = df_t.merge(df_d, left_on='disc_id', right_on='id', suffixes=('_t', '_d'))
-    fig = px.bar(df_plot, x='nome_t', y='nota', color='nome_d',
-                 title='Minhas Notas por Matéria', text_auto=True)
-    st.plotly_chart(fig, use_container_width=True)
+    # Re-enabled plotly if available, else fallback
+    try:
+        import plotly.express as px
+        fig = px.bar(df_plot, x='nome_t', y='nota', color='nome_d',
+                     title='Minhas Notas por Matéria', text_auto=True)
+        st.plotly_chart(fig, use_container_width=True)
+    except ImportError:
+        st.bar_chart(df_plot.set_index('nome_t')['nota'])
 
 # ------------------------------------------
 # ESTRUTURA PRINCIPAL DE NAVEGAÇÃO
@@ -224,18 +272,39 @@ def modulo_dashboard():
 
 st.set_page_config(page_title='EduTrack AI', layout='wide')
 
+# Tenta recuperar o token do cookie NO INÍCIO do script
+if 'logged_in' not in st.session_state or not st.session_state.logged_in:
+    cookie_token = st.context.cookies.get('auth_token')
+    if cookie_token:
+        st.session_state.auth_token = cookie_token
+        st.session_state.logged_in = True
+        st.session_state.login_time = datetime.now()
+
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
+
+# Verifica se a sessão expirou (24 horas)
+if st.session_state.get('logged_in') and 'login_time' in st.session_state:
+    if datetime.now() - st.session_state.login_time > timedelta(hours=24):
+        st.session_state.clear()
+        delete_cookie('auth_token')
+        st.session_state.logged_in = False
+        st.rerun()
 
 if not st.session_state.logged_in:
     tela_acesso()
 else:
+    # Garante que o cookie esteja presente no navegador se estivermos logados
+    if not st.context.cookies.get('auth_token'):
+        set_cookie('auth_token', st.session_state.auth_token)
+
     with st.sidebar:
         st.title('EduTrack AI')
         menu = st.radio('Gerenciar:', ['Painel Geral', 'Professores', 'Disciplinas', 'Tarefas/Notas'])
         st.markdown('---')
         if st.button('Sair'):
             st.session_state.clear()
+            delete_cookie('auth_token')
             st.rerun()
 
     match menu:
