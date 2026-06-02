@@ -1,0 +1,5 @@
+- Gerenciamento de tarefas: Checkbox & Filtros pra visualizar tarefas por disciplina
+- DashBoard
+- Calc avancado de progresso
+- Filtro de busca
+- relatorio de pdf
