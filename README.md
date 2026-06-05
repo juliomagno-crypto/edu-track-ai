@@ -54,6 +54,7 @@ Para rodar o projeto, as seguintes bibliotecas Python são necessárias:
 - plotly
 - requests
 - watchdog
+- time
 ```
 
 *Desenvolvido com foco em dados e experiência do usuário, transformando informações dispersas em conhecimento acionável.*
