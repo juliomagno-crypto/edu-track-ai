@@ -83,7 +83,7 @@ def tela_acesso():
 
             if st.form_submit_button('Cadastrar'):
                 if not pass_c == valida_senha(pass_c):
-                    st.error('Erro ao cadastrar usuário: Necessário senha caralho ')
+                    st.error('Erro ao cadastrar usuário: Necessário senha')
                 res = requests.post(f'{BASE_URL}/auth/signup', json={'name': nome, 'email': email_c, 'password': pass_c})
                 if res.status_code == 200:
                     st.success('Conta criada! Agora faça o login.')
