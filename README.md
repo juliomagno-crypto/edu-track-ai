@@ -54,7 +54,55 @@ Para rodar o projeto, as seguintes bibliotecas Python são necessárias:
 - plotly
 - requests
 - watchdog
-- time
+- numpy
 ```
 
+## 🚀 Como Baixar e Instalar
+
+O **EduTrack AI** deve ser instalado diretamente a partir do código-fonte. Siga os passos abaixo:
+
+1.  **Clone o repositório:**
+    ```bash
+    git clone https://github.com/juliomagno-crypto/edu-track-ai.git
+    cd edu-track-ai
+    ```
+
+2.  **Crie um ambiente virtual (recomendado):**
+    ```bash
+    python -m venv .venv
+    ```
+
+3.  **Ative o ambiente virtual:**
+    *   **Linux/macOS:**
+        ```bash
+        source .venv/bin/activate
+        ```
+    *   **Windows:**
+        ```bash
+        .venv\Scripts\activate
+        ```
+
+4.  **Instale as dependências:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## 💻 Como Executar
+
+Após concluir a instalação, você pode iniciar a aplicação.
+
+### Comando Padrão:
+```bash
+streamlit run src/main.py
+```
+
+### No NixOS:
+No NixOS, para garantir a compatibilidade das bibliotecas gráficas, utilize:
+```bash
+steam-run streamlit run src/main.py
+```
+
+A interface do EduTrack AI abrirá automaticamente no seu navegador padrão (geralmente em `http://localhost:8501`).
+
+---
 *Desenvolvido com foco em dados e experiência do usuário, transformando informações dispersas em conhecimento acionável.*
