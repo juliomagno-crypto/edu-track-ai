@@ -1,9 +1,8 @@
 import pandas as pd
-# Tirei a extensao a baixo pois nao estava funcionando no meu pc (ryan)
-#import plotly.express as px
+import plotly.express as px
 import streamlit as st
 import streamlit.components.v1 as components
-import api
+import api # Lib local
 import re
 import time
 import requests
@@ -23,6 +22,7 @@ def delete_cookie(name):
     js_code = f"""
         <script>
         document.cookie = "{name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+        window.parent.location.reload();
         </script>
     """
     components.html(js_code, height=0)
@@ -137,6 +137,13 @@ def tela_acesso():
                         res = requests.post(f'{api.BASE_URL}/auth/signup', json={'name': nome, 'email': email_c, 'password': pass_c})
                         if res.status_code == 200:
                             st.success('Conta criada! Agora faça o login.')
+                            time.sleep(2)
+                            js_code = """
+                                <script>
+                                window.parent.location.reload();
+                                </script>
+                            """
+                            components.html(js_code, height=0)
                         else:
                             placeholder_signup = st.empty()
                             placeholder_signup.error('Erro ao cadastrar usuário.')
@@ -165,15 +172,38 @@ def modulo_professores():
     if dados:
         df = pd.DataFrame(dados)
         st.subheader('Seus Professores Cadastrados')
-        # Editor de dados para facilitar a vida do aluno
-        df_editado = st.data_editor(df[['id', 'nome', 'email']], use_container_width=True, hide_index=True, num_rows='dynamic')
 
-        if st.button('Salvar Alterações/Exclusões em Professores'):
-            # Para simplificar, atualizamos o que foi alterado
-            for _, row in df_editado.iterrows():
-                api.api_patch('professores', row['id'], {'nome': row['nome'], 'email': row['email']})
-            st.success('Dados sincronizados!')
-            st.rerun()
+        if 'edit_prof' not in st.session_state:
+            st.session_state.edit_prof = False
+
+        # Editor de dados para facilitar a vida do aluno
+        df_editado = st.data_editor(
+            df[['id', 'nome', 'email']],
+            column_config={'id': None},
+            use_container_width=True,
+            hide_index=True,
+            num_rows='dynamic' if st.session_state.edit_prof else None,
+            disabled=not st.session_state.edit_prof
+        )
+
+        # Container para os botões no canto inferior direito
+        col_espaco, col_btn = st.columns([0.8, 0.2])
+        with col_btn:
+            if not st.session_state.edit_prof:
+                if st.button('Editar ✏️', use_container_width=True):
+                    st.session_state.edit_prof = True
+                    st.rerun()
+            else:
+                if st.button('Salvar Alterações ✅', use_container_width=True):
+                    # Para simplificar, atualizamos o que foi alterado
+                    for _, row in df_editado.iterrows():
+                        api.api_patch('professores', row['id'], {'nome': row['nome'], 'email': row['email']})
+                    st.success('Dados sincronizados!')
+                    st.session_state.edit_prof = False
+                    st.rerun()
+                if st.button('Cancelar ❌', use_container_width=True):
+                    st.session_state.edit_prof = False
+                    st.rerun()
     else:
         st.info('Nenhum professor cadastrado ainda.')
 
