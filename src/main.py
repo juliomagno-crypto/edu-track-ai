@@ -164,8 +164,18 @@ def modulo_professores():
         nome = st.text_input('Nome do Professor')
         email = st.text_input('E-mail de Contato')
         if st.button('Cadastrar Professor'):
-            api.api_post('professores', {'nome': nome, 'email': email})
-            st.rerun()
+            nome = limpar_texto(nome)
+            email = limpar_texto(email)
+            
+            if not nome:
+                st.error('O nome do professor é obrigatório.')
+            elif email and not valida_email(email):
+                st.error('E-mail inválido. Se fornecido, deve ser um e-mail válido.')
+            else:
+                api.api_post('professores', {'nome': nome, 'email': email if email else None})
+                st.success('Professor cadastrado com sucesso!')
+                time.sleep(1)
+                st.rerun()
 
     # [R]EAD & [U]PDATE & [D]ELETE
     dados = api.api_get('professores')
@@ -195,12 +205,31 @@ def modulo_professores():
                     st.rerun()
             else:
                 if st.button('Salvar Alterações ✅', use_container_width=True):
-                    # Para simplificar, atualizamos o que foi alterado
-                    for _, row in df_editado.iterrows():
-                        api.api_patch('professores', row['id'], {'nome': row['nome'], 'email': row['email']})
-                    st.success('Dados sincronizados!')
-                    st.session_state.edit_prof = False
-                    st.rerun()
+                    erros_validacao = []
+                    # Validação dos dados editados
+                    for index, row in df_editado.iterrows():
+                        nome_val = limpar_texto(str(row['nome']))
+                        email_val = limpar_texto(str(row['email'])) if row['email'] else ""
+                        
+                        if not nome_val:
+                            erros_validacao.append(f"Linha {index + 1}: O nome do professor não pode ser vazio.")
+                        if email_val and not valida_email(email_val):
+                            erros_validacao.append(f"Linha {index + 1}: E-mail '{email_val}' é inválido.")
+                    
+                    if erros_validacao:
+                        for erro in erros_validacao:
+                            st.error(erro)
+                    else:
+                        # Para simplificar, atualizamos o que foi alterado
+                        for _, row in df_editado.iterrows():
+                            api.api_patch('professores', row['id'], {
+                                'nome': limpar_texto(str(row['nome'])), 
+                                'email': limpar_texto(str(row['email'])) if row['email'] else None
+                            })
+                        st.success('Dados sincronizados!')
+                        st.session_state.edit_prof = False
+                        time.sleep(1)
+                        st.rerun()
                 if st.button('Cancelar ❌', use_container_width=True):
                     st.session_state.edit_prof = False
                     st.rerun()
