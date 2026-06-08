@@ -40,19 +40,34 @@ def valida_nome(nome):
     return erros
 
 def valida_email(email):
-    """Valida o formato do e-mail."""
+    """Valida o formato do e-mail: sem espaços, sem vírgulas, e formato correto."""
     if not email:
         return False
 
-    exclui_espaco(email)
+    # Verifica se tem espaços ou vírgulas
+    if ' ' in email or ',' in email:
+        return False
 
     if email.count('@') != 1:
         return False
+    
+    partes = email.split('@')
+    usuario = partes[0]
+    dominio_completo = partes[1]
+
     # Garante que haja pelo menos 2 caracteres antes do @
-    if len(email.split('@')[0]) < 2:
+    if len(usuario) < 2:
         return False
-    if '.' not in email:
+    
+    # Verifica se tem ponto no domínio e se há algo entre o @ e o primeiro ponto
+    if '.' not in dominio_completo:
         return False
+    
+    # Divide o domínio para verificar a "palavra" entre @ e .
+    nome_dominio = dominio_completo.split('.')[0]
+    if len(nome_dominio) < 1:
+        return False
+        
     return True
 
 def main():
