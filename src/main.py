@@ -3,7 +3,7 @@ import plotly.express as px
 import streamlit as st
 import streamlit.components.v1 as components
 import api # Lib local
-import re
+import ultilitario as util # Lib local
 import time
 import requests
 from datetime import datetime, timedelta
@@ -27,49 +27,9 @@ def delete_cookie(name):
     """
     components.html(js_code, height=0)
 
-def limpar_texto(texto):
-    if not texto:
-        return ""
-    return re.sub(r'\s+', ' ', texto).strip()
-
 # ------------------------------------------------
 # SISTEMA DE AUTENTICAÇÃO
 # ------------------------------------------------
-
-def valida_senha(senha):
-    erros = []
-    if len(senha) < 8:
-        erros.append('A senha deve ter no mínimo 8 caracteres.')
-    if not any(char.isupper() for char in senha):
-        erros.append('A senha deve conter pelo menos uma letra maiúscula.')
-    if not any(char.islower() for char in senha):
-        erros.append('A senha deve conter pelo menos uma letra minúscula.')
-    if not any(char.isdigit() for char in senha):
-        erros.append('A senha deve conter pelo menos um número.')
-    if not any(not char.isalnum() for char in senha):
-        erros.append('A senha deve conter pelo menos um caractere especial.')
-    return erros
-
-def valida_nome(nome):
-    erros = []
-    if len(nome) > 255:
-        erros.append('O nome não pode passar de 255 caracteres.')
-    espacos = nome.count(' ')
-    if espacos < 1:
-        erros.append('O nome deve conter pelo menos um sobrenome, coloque seu nome completo.')
-    if espacos > 15:
-        erros.append('O nome não pode conter mais de 15 espaços.')
-    return erros
-
-def valida_email(email):
-    if email.count('@') != 1:
-        return False
-    # Garante que haja pelo menos 2 caracteres antes do @
-    if len(email.split('@')[0]) < 2:
-        return False
-    if '.' not in email:
-        return False
-    return True
 
 def tela_acesso():
     st.title('Portal Acadêmico Personalizado')
@@ -80,7 +40,7 @@ def tela_acesso():
             email = st.text_input('E-mail')
             senha = st.text_input('Senha', type='password')
             if st.form_submit_button('Acessar Meu Painel'):
-                if not valida_email(email):
+                if not util.valida_email(email):
                     placeholder = st.empty()
                     placeholder.error('E-mail inválido. Deve conter pelo menos 2 caracteres antes do "@" e exatamente um "@"')
                     time.sleep(10)
@@ -107,11 +67,11 @@ def tela_acesso():
             pass_c = st.text_input('Senha', type='password')
 
             if st.form_submit_button('Cadastrar'):
-                nome = limpar_texto(nome)
-                email_c = limpar_texto(email_c)
-                pass_c = limpar_texto(pass_c)
+                nome = util.limpar_texto(nome)
+                email_c = util.limpar_texto(email_c)
+                pass_c = util.limpar_texto(pass_c)
 
-                erros_nome = valida_nome(nome)
+                erros_nome = util.valida_nome(nome)
                 if erros_nome:
                     placeholder_nome = st.empty()
                     with placeholder_nome.container():
@@ -119,13 +79,13 @@ def tela_acesso():
                             st.error(erro)
                     time.sleep(10)
                     placeholder_nome.empty()
-                elif not valida_email(email_c):
+                elif not util.valida_email(email_c):
                     placeholder_email = st.empty()
-                    placeholder_email.error('E-mail inválido. Deve conter pelo menos 2 caracteres antes do "@" e exatamente um "@"')
+                    placeholder_email.error('E-mail inválido. Deve conter no minimo 2 caracteres antes do arroba (@), exatamente um arroba (@) e pelo menos um ponto (.)')
                     time.sleep(10)
                     placeholder_email.empty()
                 else:
-                    erros = valida_senha(pass_c)
+                    erros = util.valida_senha(pass_c)
                     if erros:
                         placeholder_erros = st.empty()
                         with placeholder_erros.container():
@@ -164,12 +124,12 @@ def modulo_professores():
         nome = st.text_input('Nome do Professor')
         email = st.text_input('E-mail de Contato')
         if st.button('Cadastrar Professor'):
-            nome = limpar_texto(nome)
-            email = limpar_texto(email)
-            
+            nome = util.limpar_texto(nome)
+            email = util.limpar_texto(email)
+
             if not nome:
                 st.error('O nome do professor é obrigatório.')
-            elif email and not valida_email(email):
+            elif email and not util.valida_email(email):
                 st.error('E-mail inválido. Se fornecido, deve ser um e-mail válido.')
             else:
                 api.api_post('professores', {'nome': nome, 'email': email if email else None})
@@ -189,43 +149,47 @@ def modulo_professores():
         # Editor de dados para facilitar a vida do aluno
         df_editado = st.data_editor(
             df[['id', 'nome', 'email']],
-            column_config={'id': None},
+            column_config={
+                'id': st.column_config.TextColumn("ID", disabled=True, width="small"),
+            },
             use_container_width=True,
             hide_index=True,
             num_rows='dynamic' if st.session_state.edit_prof else None,
-            disabled=not st.session_state.edit_prof
+            disabled=not st.session_state.edit_prof,
+            key="prof_editor"
         )
 
         # Container para os botões no canto inferior direito
-        col_espaco, col_btn = st.columns([0.8, 0.2])
-        with col_btn:
+        col_espaco, col_save, col_del, col_cancel = st.columns([0.4, 0.2, 0.2, 0.2])
+        with col_save:
             if not st.session_state.edit_prof:
                 if st.button('Editar ✏️', use_container_width=True):
                     st.session_state.edit_prof = True
                     st.rerun()
             else:
-                if st.button('Salvar Alterações ✅', use_container_width=True):
+                if st.button('Salvar ✅', use_container_width=True):
                     erros_validacao = []
                     # Validação dos dados editados
                     for index, row in df_editado.iterrows():
-                        nome_val = limpar_texto(str(row['nome']))
-                        email_val = limpar_texto(str(row['email'])) if row['email'] else ""
-                        
+                        nome_val = util.limpar_texto(str(row['nome']))
+                        email_val = util.limpar_texto(str(row['email'])) if row['email'] else ""
+
                         if not nome_val:
                             erros_validacao.append(f"Linha {index + 1}: O nome do professor não pode ser vazio.")
-                        if email_val and not valida_email(email_val):
+                        if email_val and not util.valida_email(email_val):
                             erros_validacao.append(f"Linha {index + 1}: E-mail '{email_val}' é inválido.")
-                    
+
                     if erros_validacao:
                         for erro in erros_validacao:
                             st.error(erro)
                     else:
-                        # Para simplificar, atualizamos o que foi alterado
+                        # Atualiza apenas os que permaneceram
                         for _, row in df_editado.iterrows():
-                            api.api_patch('professores', row['id'], {
-                                'nome': limpar_texto(str(row['nome'])), 
-                                'email': limpar_texto(str(row['email'])) if row['email'] else None
-                            })
+                            if 'id' in row and row['id']:
+                                api.api_patch('professores', row['id'], {
+                                    'nome': util.limpar_texto(str(row['nome'])),
+                                    'email': util.limpar_texto(str(row['email'])) if row['email'] else None
+                                })
                         st.success('Dados sincronizados!')
                         st.session_state.edit_prof = False
                         time.sleep(1)
@@ -329,45 +293,49 @@ def modulo_dashboard():
 # ESTRUTURA PRINCIPAL DE NAVEGAÇÃO
 # ------------------------------------------
 
-st.set_page_config(page_title='EduTrack AI', layout='wide')
+def main():
+    st.set_page_config(page_title='EduTrack AI', layout='wide')
 
-# Tenta recuperar o token do cookie NO INÍCIO do script
-if 'logged_in' not in st.session_state or not st.session_state.logged_in:
-    cookie_token = st.context.cookies.get('auth_token')
-    if cookie_token:
-        st.session_state.auth_token = cookie_token
-        st.session_state.logged_in = True
-        st.session_state.login_time = datetime.now()
+    # Tenta recuperar o token do cookie NO INÍCIO do script
+    if 'logged_in' not in st.session_state or not st.session_state.logged_in:
+        cookie_token = st.context.cookies.get('auth_token')
+        if cookie_token:
+            st.session_state.auth_token = cookie_token
+            st.session_state.logged_in = True
+            st.session_state.login_time = datetime.now()
 
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-
-# Verifica se a sessão expirou (24 horas)
-if st.session_state.get('logged_in') and 'login_time' in st.session_state:
-    if datetime.now() - st.session_state.login_time > timedelta(hours=24):
-        st.session_state.clear()
-        delete_cookie('auth_token')
+    if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
-        st.rerun()
 
-if not st.session_state.logged_in:
-    tela_acesso()
-else:
-    # Garante que o cookie esteja presente no navegador se estivermos logados
-    if not st.context.cookies.get('auth_token'):
-        set_cookie('auth_token', st.session_state.auth_token)
-
-    with st.sidebar:
-        st.title('EduTrack AI')
-        menu = st.radio('Gerenciar:', ['Painel Geral', 'Professores', 'Disciplinas', 'Tarefas/Notas'])
-        st.markdown('---')
-        if st.button('Sair'):
+    # Verifica se a sessão expirou (24 horas)
+    if st.session_state.get('logged_in') and 'login_time' in st.session_state:
+        if datetime.now() - st.session_state.login_time > timedelta(hours=24):
             st.session_state.clear()
             delete_cookie('auth_token')
+            st.session_state.logged_in = False
             st.rerun()
 
-    match menu:
-        case 'Painel Geral': modulo_dashboard()
-        case 'Professores': modulo_professores()
-        case 'Disciplinas': modulo_disciplinas()
-        case 'Tarefas/Notas': modulo_tarefas()
+    if not st.session_state.logged_in:
+        tela_acesso()
+    else:
+        # Garante que o cookie esteja presente no navegador se estivermos logados
+        if not st.context.cookies.get('auth_token'):
+            set_cookie('auth_token', st.session_state.auth_token)
+
+        with st.sidebar:
+            st.title('EduTrack AI')
+            menu = st.radio('Gerenciar:', ['Painel Geral', 'Professores', 'Disciplinas', 'Tarefas/Notas'])
+            st.markdown('---')
+            if st.button('Sair'):
+                st.session_state.clear()
+                delete_cookie('auth_token')
+                st.rerun()
+
+        match menu:
+            case 'Painel Geral': modulo_dashboard()
+            case 'Professores': modulo_professores()
+            case 'Disciplinas': modulo_disciplinas()
+            case 'Tarefas/Notas': modulo_tarefas()
+
+if __name__ == "__main__":
+    main()
