@@ -1,6 +1,10 @@
 import requests
 import streamlit as st
 
+# ---
+# Isto é o arquivo aonde temos todas as funcoes importantes para conectar com o Xano
+# ---
+
 # Substitua pela SUA URL real do grupo de API no Xano
 BASE_URL = 'https://x8ki-letl-twmt.n7.xano.io/api:FzC8bz6B'
 
