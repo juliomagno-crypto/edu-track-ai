@@ -270,9 +270,11 @@ def modulo_disciplinas():
             with col1:
                 carga_horaria = st.number_input('Carga Horária (horas)', min_value=1, step=1)
                 dia_semana = st.selectbox('Dia da Semana', options=['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'])
+                faltas = st.number_input('Faltas Atuais', min_value=0, step=1)
             with col2:
                 max_faltas = st.number_input('Limite de Faltas', min_value=0, step=1)
                 horario = st.time_input('Horário da Aula')
+                nota = st.number_input('Nota Final/Atual', 0.0, 10.0, 0.0)
             
             anotacoes = st.text_area('Anotações (Opcional)')
             
@@ -287,6 +289,8 @@ def modulo_disciplinas():
                         'prof_id': opcoes_p[p_escolhido],
                         'carga_horaria': carga_horaria,
                         'max_faltas': max_faltas,
+                        'faltas': faltas,
+                        'nota': nota,
                         'dia_semana': dia_semana,
                         'horario': horario.strftime('%H:%M'),
                         'anotacoes': anotacoes
@@ -306,12 +310,14 @@ def modulo_disciplinas():
             # Junta os nomes para exibição
             df_view = df_d.merge(df_p[['id', 'nome']], left_on='prof_id', right_on='id', suffixes=('', '_prof'))
             
-            # Reorganiza as colunas para uma visualização melhor
-            cols_to_show = ['id', 'nome', 'nome_prof', 'dia_semana', 'horario', 'carga_horaria', 'max_faltas']
-            # Filtra apenas as colunas que realmente existem no DataFrame resultante
-            cols_to_show = [c for c in cols_to_show if c in df_view.columns]
+            # Reorganiza as colunas conforme solicitado
+            # nome da disciplina, nome do professor, carga horaria, limite de faltas, faltas, nota e horario
+            cols_to_show = ['nome', 'nome_prof', 'carga_horaria', 'max_faltas', 'faltas', 'nota', 'horario']
             
-            st.dataframe(df_view[cols_to_show], use_container_width=True, hide_index=True)
+            # Filtra apenas as colunas que realmente existem no DataFrame resultante para evitar novos erros
+            cols_existentes = [c for c in cols_to_show if c in df_view.columns]
+            
+            st.dataframe(df_view[cols_existentes], use_container_width=True, hide_index=True)
         else:
             st.warning('Aviso: Os dados das disciplinas parecem estar incompletos (faltando prof_id).')
             st.dataframe(df_d, use_container_width=True, hide_index=True)
@@ -423,10 +429,6 @@ def main():
             case 'Professores': modulo_professores()
             case 'Disciplinas': modulo_disciplinas()
             case 'Tarefas/Notas': modulo_tarefas()
-
-if __name__ == "__main__":
-    main()
-arefas()
 
 if __name__ == "__main__":
     main()
