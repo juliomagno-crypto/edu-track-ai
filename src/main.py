@@ -132,10 +132,17 @@ def modulo_professores():
             elif email and not util.valida_email(email):
                 st.error('E-mail inválido. Se fornecido, deve ser um e-mail válido.')
             else:
-                api.api_post('professores', {'nome': nome, 'email': email if email else None})
-                st.success('Professor cadastrado com sucesso!')
-                time.sleep(1)
-                st.rerun()
+                # Validação de e-mail único
+                profs_existentes = api.api_get('professores')
+                email_duplicado = any(p.get('email') == email for p in profs_existentes if email and p.get('email'))
+                
+                if email_duplicado:
+                    st.error(f'O e-mail "{email}" já está cadastrado para outro professor.')
+                else:
+                    api.api_post('professores', {'nome': nome, 'email': email if email else None})
+                    st.success('Professor cadastrado com sucesso!')
+                    time.sleep(1)
+                    st.rerun()
 
     # [R]EAD & [U]PDATE & [D]ELETE
     dados = api.api_get('professores')
@@ -159,8 +166,19 @@ def modulo_professores():
             key="prof_editor"
         )
 
-        # Container para os botões no canto inferior direito
-        col_espaco, col_save, col_del, col_cancel = st.columns([0.4, 0.2, 0.2, 0.2])
+        # Container para os botões
+        col_del_prof, col_espaco, col_save, col_cancel = st.columns([0.2, 0.4, 0.2, 0.2])
+        
+        with col_del_prof:
+            if st.session_state.edit_prof:
+                # Mostra seletor de ID para exclusão apenas em modo edição
+                id_excluir = st.number_input('ID p/ Excluir', min_value=1, step=1, key='id_del_prof')
+                if st.button('Excluir Professor 🗑️', type='primary', use_container_width=True):
+                    api.api_delete('professores', id_excluir)
+                    st.success('Professor excluído!')
+                    time.sleep(1)
+                    st.rerun()
+
         with col_save:
             if not st.session_state.edit_prof:
                 if st.button('Editar ✏️', use_container_width=True):
@@ -169,31 +187,59 @@ def modulo_professores():
             else:
                 if st.button('Salvar ✅', use_container_width=True):
                     erros_validacao = []
+                    profs_atuais = api.api_get('professores')
+                    
                     # Validação dos dados editados
                     for index, row in df_editado.iterrows():
                         nome_val = util.limpar_texto(str(row['nome']))
                         email_val = util.limpar_texto(str(row['email'])) if row['email'] else ""
+                        id_atual = row.get('id')
 
                         if not nome_val:
                             erros_validacao.append(f"Linha {index + 1}: O nome do professor não pode ser vazio.")
                         if email_val and not util.valida_email(email_val):
                             erros_validacao.append(f"Linha {index + 1}: E-mail '{email_val}' é inválido.")
+                        
+                        # Validação de e-mail único (não pode ser igual ao de outro ID)
+                        if email_val:
+                            email_em_uso = any(p.get('email') == email_val and p.get('id') != id_atual for p in profs_atuais)
+                            if email_em_uso:
+                                erros_validacao.append(f"Linha {index + 1}: O e-mail '{email_val}' já está em uso por outro professor.")
+                        else:
+                            # Nova validação: Nome duplicado quando não há e-mail na edição
+                            nome_em_uso_sem_email = any(p.get('nome').lower() == nome_val.lower() and not p.get('email') and p.get('id') != id_atual for p in profs_atuais)
+                            if nome_em_uso_sem_email:
+                                erros_validacao.append(f"Linha {index + 1}: Já existe outro professor com o nome '{nome_val}' sem e-mail.")
 
                     if erros_validacao:
                         for erro in erros_validacao:
                             st.error(erro)
                     else:
-                        # Atualiza apenas os que permaneceram
-                        for _, row in df_editado.iterrows():
-                            if 'id' in row and row['id']:
-                                api.api_patch('professores', row['id'], {
-                                    'nome': util.limpar_texto(str(row['nome'])),
-                                    'email': util.limpar_texto(str(row['email'])) if row['email'] else None
-                                })
-                        st.success('Dados sincronizados!')
-                        st.session_state.edit_prof = False
-                        time.sleep(1)
-                        st.rerun()
+                        # Mostra uma barra de progresso simples ou mensagem de espera
+                        with st.spinner('Sincronizando dados com o servidor...'):
+                            sucesso_total = True
+                            for index, row in df_editado.iterrows():
+                                prof_id = row.get('id')
+                                if prof_id:
+                                    # Limpa os dados antes de enviar
+                                    nome_final = util.limpar_texto(str(row['nome']))
+                                    email_raw = str(row['email']) if row['email'] else ""
+                                    email_final = util.limpar_texto(email_raw) if email_raw and email_raw.lower() != 'none' else None
+                                    
+                                    res = api.api_patch('professores', prof_id, {
+                                        'nome': nome_final,
+                                        'email': email_final
+                                    })
+                                    
+                                    if res.status_code != 200:
+                                        sucesso_total = False
+                                        st.error(f"Erro ao atualizar professor ID {prof_id}: {res.text}")
+                            
+                            if sucesso_total:
+                                st.success('Todos os dados foram sincronizados com sucesso!')
+                                st.session_state.edit_prof = False
+                                time.sleep(1.5)
+                                st.rerun()
                 if st.button('Cancelar ❌', use_container_width=True):
                     st.session_state.edit_prof = False
                     st.rerun()
@@ -212,21 +258,63 @@ def modulo_disciplinas():
 
     # [C]REATE
     with st.expander('➕ Nova Disciplina'):
-        nome_d = st.text_input('Nome da Matéria')
-        opcoes_p = {p['nome']: p['id'] for p in profs}
-        p_escolhido = st.selectbox('Professor Responsável', options=list(opcoes_p.keys()))
-        if st.button('Salvar Disciplina'):
-            api.api_post('disciplinas', {'nome': nome_d, 'prof_id': opcoes_p[p_escolhido]})
-            st.rerun()
+        with st.form('form_nova_disciplina'):
+            nome_d = st.text_input('Nome da Matéria')
+            
+            profs = api.api_get('professores')
+            # Formata o rótulo para exibir Nome | Email
+            opcoes_p = {f"{p['nome']} | {p.get('email', 'S/ E-mail')}": p['id'] for p in profs} if profs else {}
+            p_escolhido = st.selectbox('Professor Responsável', options=list(opcoes_p.keys()))
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                carga_horaria = st.number_input('Carga Horária (horas)', min_value=1, step=1)
+                dia_semana = st.selectbox('Dia da Semana', options=['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'])
+            with col2:
+                max_faltas = st.number_input('Limite de Faltas', min_value=0, step=1)
+                horario = st.time_input('Horário da Aula')
+            
+            anotacoes = st.text_area('Anotações (Opcional)')
+            
+            if st.form_submit_button('Salvar Disciplina'):
+                if not nome_d:
+                    st.error('O nome da disciplina é obrigatório.')
+                elif not p_escolhido:
+                    st.error('Selecione um professor.')
+                else:
+                    api.api_post('disciplinas', {
+                        'nome': nome_d, 
+                        'prof_id': opcoes_p[p_escolhido],
+                        'carga_horaria': carga_horaria,
+                        'max_faltas': max_faltas,
+                        'dia_semana': dia_semana,
+                        'horario': horario.strftime('%H:%M'),
+                        'anotacoes': anotacoes
+                    })
+                    st.success('Disciplina cadastrada com sucesso!')
+                    time.sleep(1)
+                    st.rerun()
 
     # [R]EAD
     discs = api.api_get('disciplinas')
     if discs:
         df_d = pd.DataFrame(discs)
         df_p = pd.DataFrame(profs)
-        # Junta os nomes para exibição
-        df_view = df_d.merge(df_p[['id', 'nome']], left_on='prof_id', right_on='id', suffixes=('', '_prof'))
-        st.dataframe(df_view[['id', 'nome', 'nome_prof']], use_container_width=True, hide_index=True)
+        
+        # Verifica se a coluna 'prof_id' existe para evitar erro no merge
+        if 'prof_id' in df_d.columns:
+            # Junta os nomes para exibição
+            df_view = df_d.merge(df_p[['id', 'nome']], left_on='prof_id', right_on='id', suffixes=('', '_prof'))
+            
+            # Reorganiza as colunas para uma visualização melhor
+            cols_to_show = ['id', 'nome', 'nome_prof', 'dia_semana', 'horario', 'carga_horaria', 'max_faltas']
+            # Filtra apenas as colunas que realmente existem no DataFrame resultante
+            cols_to_show = [c for c in cols_to_show if c in df_view.columns]
+            
+            st.dataframe(df_view[cols_to_show], use_container_width=True, hide_index=True)
+        else:
+            st.warning('Aviso: Os dados das disciplinas parecem estar incompletos (faltando prof_id).')
+            st.dataframe(df_d, use_container_width=True, hide_index=True)
 
         # [D]ELETE
         id_del = st.number_input('ID para remover', min_value=1, step=1)
@@ -312,8 +400,7 @@ def main():
         if datetime.now() - st.session_state.login_time > timedelta(hours=24):
             st.session_state.clear()
             delete_cookie('auth_token')
-            st.session_state.logged_in = False
-            st.rerun()
+            st.stop()
 
     if not st.session_state.logged_in:
         tela_acesso()
@@ -329,13 +416,17 @@ def main():
             if st.button('Sair'):
                 st.session_state.clear()
                 delete_cookie('auth_token')
-                st.rerun()
+                st.stop()
 
         match menu:
             case 'Painel Geral': modulo_dashboard()
             case 'Professores': modulo_professores()
             case 'Disciplinas': modulo_disciplinas()
             case 'Tarefas/Notas': modulo_tarefas()
+
+if __name__ == "__main__":
+    main()
+arefas()
 
 if __name__ == "__main__":
     main()
