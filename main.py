@@ -31,7 +31,89 @@ def delete_cookie(name):
 # ------------------------------------------------
 # SISTEMA DE AUTENTICAÇÃO
 # ------------------------------------------------
-    
+def tela_acesso():
+    st.title('Portal Acadêmico Personalizado')
+    tab_login, tab_cadastro = st.tabs(['Entrar', 'Criar Minha Conta'])
+
+    with tab_login:
+        with st.form('login_form'):
+            email = st.text_input('E-mail')
+            senha = st.text_input('Senha', type='password')
+            if st.form_submit_button('Acessar Meu Painel'):
+                if not util.valida_email(email):
+                    placeholder = st.empty()
+                    placeholder.error('E-mail inválido. Deve conter pelo menos 2 caracteres antes do "@" e exatamente um "@"')
+                    time.sleep(10)
+                    placeholder.empty()
+                else:
+                    res = requests.post(f'{api.BASE_URL}/auth/login', json={'email': email, 'password': senha})
+                    if res.status_code == 200:
+                        token = res.json().get('authToken')
+                        st.session_state.auth_token = token
+                        st.session_state.logged_in = True
+                        st.session_state.login_time = datetime.now()
+                        set_cookie('auth_token', token)
+                        st.rerun()
+                    else:
+                        placeholder = st.empty()
+                        placeholder.error('Credenciais inválidas.')
+                        time.sleep(10)
+                        placeholder.empty()
+
+    with tab_cadastro:
+        with st.form('cadastro_form'):
+            nome = st.text_input('Nome')
+            email_c = st.text_input('E-mail')
+            pass_c = st.text_input('Senha', type='password')
+
+            if st.form_submit_button('Cadastrar'):
+                nome = util.limpar_texto(nome)
+                email_c = util.limpar_texto(email_c)
+                pass_c = util.limpar_texto(pass_c)
+
+                erros_nome = util.valida_nome(nome)
+                if erros_nome:
+                    placeholder_nome = st.empty()
+                    with placeholder_nome.container():
+                        for erro in erros_nome:
+                            st.error(erro)
+                    time.sleep(10)
+                    placeholder_nome.empty()
+                elif not util.valida_email(email_c):
+                    placeholder_email = st.empty()
+                    placeholder_email.error('E-mail inválido. Deve conter no minimo 2 caracteres antes do arroba (@), exatamente um arroba (@) e pelo menos um ponto (.)')
+                    time.sleep(10)
+                    placeholder_email.empty()
+                else:
+                    erros = util.valida_senha(pass_c)
+                    if erros:
+                        placeholder_erros = st.empty()
+                        with placeholder_erros.container():
+                            for erro in erros:
+                                st.error(erro)
+                        time.sleep(10)
+                        placeholder_erros.empty()
+                    else:
+                        res = requests.post(f'{api.BASE_URL}/auth/signup', json={'name': nome, 'email': email_c, 'password': pass_c})
+                        if res.status_code == 200:
+                            st.success('Conta criada! Agora faça o login.')
+                            time.sleep(2)
+                            js_code = """
+                                <script>
+                                window.parent.location.reload();
+                                </script>
+                            """
+                            components.html(js_code, height=0)
+                        else:
+                            placeholder_signup = st.empty()
+                            placeholder_signup.error('Erro ao cadastrar usuário.')
+                            time.sleep(10)
+                            placeholder_signup.empty()
+
+# ------------------------------------------------
+# MÓDULOS CRUD PARA PROFESSORES, DISCIPLINAS
+# E TAREFAS
+# ------------------------------------------------    
 
            
 
