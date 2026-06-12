@@ -7,8 +7,6 @@ import ultilitario as util # Lib local
 import time
 import requests
 from datetime import datetime, timedelta
-from src.main import tela_acesso
-
 BASE_URL = 'https://x8ki-letl-twmt.n7.xano.io/api:FzC8bz6B'
 
 def set_cookie(name, value, days=30):
@@ -29,12 +27,61 @@ def delete_cookie(name):
         </script>
     """
     components.html(js_code, height=0)
-
+def aplicar_tema_claro():
+    return st.markdown( """
+            <style>
+            .stApp {
+                background-color: #F0F2F6;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True)
+def aplicar_tema_escuro():
+    return st.markdown( """
+            <style>
+            .stApp {
+                background-color: #1E1E1E;
+                color: #FFFFFF;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True)
+            
 # ------------------------------------------------
 # SISTEMA DE AUTENTICAÇÃO
 # ------------------------------------------------
 def tela_acesso():
-    st.title('Portal Acadêmico Personalizado')
+    st.markdown("<h1 style='text-align: center; color: #5F50BF;'>Portal Acadêmico Personalizado</h1>", unsafe_allow_html=True)
+    col_botao, col_espaco = st.columns([0.15, 1.5])
+    
+    
+    if 'tema_claro_ativo' not in st.session_state:
+         st.session_state.tema_claro_ativo = True  # Começa no claro por padrão
+
+    # 3. Aplica o tema atual baseado no estado da sessão
+    if st.session_state.tema_claro_ativo:
+        aplicar_tema_claro()
+    else:
+        aplicar_tema_escuro()
+
+    # 4. O Botão no canto superior esquerdo para alternar o tema
+    col_botao, _ = st.columns([0.2, 0.8])
+
+    with col_botao:
+        if st.session_state.tema_claro_ativo:
+            # Se está claro, mostra a opção de mudar para o escuro
+            if st.button('🌙 Tema Escuro', use_container_width=True):
+                st.session_state.tema_claro_ativo = False
+                st.rerun()
+        else:
+            # Se está escuro, mostra a opção de mudar para o claro
+            if st.button('☀️ Tema Claro', use_container_width=True):
+                st.session_state.tema_claro_ativo = True
+                st.rerun()
+             
+        
+    
+
     tab_login, tab_cadastro = st.tabs(['Entrar', 'Criar Minha Conta'])
 
     with tab_login:
@@ -170,7 +217,7 @@ def modulo_professores():
                 time.sleep(1)
                 st.rerun()
 
-    # [R]EAD & [U]PDATE & [D]ELETE
+    # [R]EAD 
     dados = api.api_get('professores')
     if dados:
         df = pd.DataFrame(dados)
@@ -179,7 +226,7 @@ def modulo_professores():
         if 'edit_prof' not in st.session_state:
             st.session_state.edit_prof = False
 
-        # Editor de dados para facilitar a vida do aluno
+        
         df_editado = st.data_editor(
             df[['id', 'nome', 'email']],
             column_config={
@@ -191,7 +238,7 @@ def modulo_professores():
             disabled=not st.session_state.edit_prof,
             key="prof_editor"
         )
-
+       # & [U]PDATE & [D]ELETE
         # Container para os botões no canto inferior direito
         col_espaco, col_save, col_del, col_cancel = st.columns([0.4, 0.2, 0.2, 0.2])
         with col_save:
@@ -233,9 +280,7 @@ def modulo_professores():
     else:
         st.info('Nenhum professor cadastrado ainda.')
 
-# ==================================================================
-# GESTÃO DE DISCIPLINAS (CORRIGIDO)
-# ==================================================================
+# GESTÃO DE DISCIPLINAS
 
 def modulo_disciplinas():
     st.header('Minhas Disciplinas')
@@ -372,6 +417,7 @@ def modulo_disciplinas():
     else:
         st.info('Nenhuma disciplina cadastrada ainda.')
 
+
 # GESTÃO DE TAREFAS ---
 
 def modulo_tarefas():
@@ -396,7 +442,7 @@ def modulo_tarefas():
         d_escolhida = st.selectbox('Disciplina', options=list(opcoes_d.keys()))
 
         projetos_id = None
-        projetos = api.api_get('projetos')
+        projetos =api.api_get('projetos')
         if projetos:
             opcoes_p = {p['nome']: p['id'] for p in projetos}
             p_escolhido = st.selectbox('Projeto Vinculado', options=['(nenhum)'] + list(opcoes_p.keys()))
@@ -430,25 +476,14 @@ def modulo_tarefas():
         df = pd.DataFrame(tarefas)
         st.subheader('Suas Tarefas')
 
-        # 🟢 CORREÇÃO DO KEYERROR: Garante mapeamento seguro de 'pontuacao' para 'nota'
-        if 'pontuacao' in df.columns and 'nota' not in df.columns:
-            df['nota'] = df['pontuacao']
-
-        # Filtra apenas as colunas que realmente existem de forma segura
-        colunas_desejadas = ['id', 'nome', 'tipo', 'status', 'nota', 'data_entrega', 'link']
-        colunas_validas = [c for c in colunas_desejadas if c in df.columns]
-        
-        df_visualizacao = df[colunas_validas].copy()
-        
-        if 'data_entrega' in df_visualizacao.columns:
-            df_visualizacao['data_entrega'] = pd.to_datetime(df_visualizacao['data_entrega']).dt.date
-        
         # [U]PDATE
+        df_visualizacao = df[['id', 'nome', 'tipo', 'status', 'pontuacao', 'data_entrega', 'link']].copy()
+        df_visualizacao['data_entrega'] = pd.to_datetime(df_visualizacao['data_entrega']).dt.date
+        
         df_editado = st.data_editor(
             df_visualizacao,
             column_config={
                 'id': st.column_config.NumberColumn('ID', disabled=True, width='small'),
-                'nome': st.column_config.TextColumn('Nome da Tarefa'),
                 'status': st.column_config.SelectboxColumn(
                     'Status', options=['Pendente', 'Em andamento', 'Entregue', 'Atrasado']
                 ),
@@ -456,8 +491,7 @@ def modulo_tarefas():
                     'Tipo', options=['Acadêmico', 'Pessoal']
                 ),
                 'data_entrega': st.column_config.DateColumn('Data de Entrega'),
-                'nota': st.column_config.NumberColumn('Nota / Pontuação', min_value=0.0, max_value=10.0),
-                'link': st.column_config.TextColumn('Link')
+                'pontuacao': st.column_config.NumberColumn('Pontuação', min_value=0.0, max_value=10.0),
             },
             use_container_width=True,
             hide_index=True,
@@ -472,14 +506,8 @@ def modulo_tarefas():
             if linhas_editadas:
                 for idx_linha, alteracoes in linhas_editadas.items():
                     tarefa_id = int(df_visualizacao.iloc[idx_linha]['id'])
-                    
                     if 'data_entrega' in alteracoes and alteracoes['data_entrega']:
                         alteracoes['data_entrega'] = str(alteracoes['data_entrega'])
-                    
-                    # 🟢 TRADUÇÃO DE VOLTA PARA A API: Se editou a 'nota', envia como 'pontuacao'
-                    if 'nota' in alteracoes:
-                        alteracoes['pontuacao'] = alteracoes.pop('nota')
-                        
                     api.api_patch('tarefas', tarefa_id, alteracoes)
                 st.success('Tarefas atualizadas!')
                 st.rerun()
@@ -519,15 +547,23 @@ def modulo_provas():
             if not conteudo:
                 st.error('O conteúdo da prova é obrigatório.')
             else:
-                api.api_post('provas', {
+                response=api.api_post('provas', {
                     'conteudo': conteudo,
                     'data': data.isoformat(),
                     'horario': horario,
                     'nota': nota,
                     'disciplinas_id': opcoes_d[d_escolhida]
+
                 })
+            time.sleep(1)
+            erro= response.status_code
+            if erro == 200:
                 st.success('Prova cadastrada com sucesso!')
                 st.rerun()
+            else:
+                st.warning(erro )
+                st.error('Erro ao cadastrar prova.')
+                
 
     # [R]EAD
     provas = api.api_get('provas')
@@ -564,7 +600,7 @@ def modulo_provas():
                     if 'data' in alteracoes and alteracoes['data']:
                         alteracoes['data'] = str(alteracoes['data'])
                     api.api_patch('provas', prova_id, alteracoes)
-                st.success('Provas atualizadas!')
+                st.success('Provas updated!')
                 st.rerun()
             else:
                 st.info('Nenhuma alteração detectada.')
@@ -575,53 +611,30 @@ def modulo_provas():
             api.api_delete('provas', id_del)
             st.success('Prova removida!')
             st.rerun()
-    else:
-        # 🟢 ALINHAMENTO CORRIGIDO: O info agora aparece corretamente se não houver registros.
-        st.info('Nenhuma prova cadastrada ainda.')
-        
+        else:
+            st.info('Nenhuma prova cadastrada ainda.')
+
 # --- DASHBOARD ---
 
 def modulo_dashboard():
     st.header('Resumo de Desempenho')
     tarefas = api.api_get('tarefas')
     discs = api.api_get('disciplinas')
-    
     if not tarefas or not discs:
-        st.info('Cadastre dados de tarefas e disciplinas para visualizar seu desempenho gráfico.')
+        st.info('Cadastre dados para visualizar seu desempenho gráfico.')
         return
 
-    # Converte os dados para DataFrames do Pandas
     df_t = pd.DataFrame(tarefas)
     df_d = pd.DataFrame(discs)
-    
-    # Valida se existem as colunas necessárias para o cálculo de notas
-    if 'pontuacao' in df_t.columns and 'disc_id' in df_t.columns:
-        # Junta as tarefas com as disciplinas correspondentes
-        df_plot = df_t.merge(df_d, left_on='disc_id', right_on='id', suffixes=('_tarefa', '_disciplina'))
-        
-        # Agrupa por nome da disciplina e calcula a média das notas
-        df_notas = df_plot.groupby('nome_disciplina')['pontuacao'].mean().reset_index()
-        df_notas = df_notas.rename(columns={'pontuacao': 'Média de Notas', 'nome_disciplina': 'Disciplina'})
-        
-        st.subheader('Distribuição de Notas por Disciplina')
-        
-        # 🟢 NOVO: Criação do Gráfico de Barras usando Plotly Express
-        fig_barras = px.bar(
-            df_notas, 
-            x='Disciplina', 
-            y='Média de Notas', 
-            title='Média de Notas por Disciplina',
-            text_auto='.1f' # Mostra a nota com uma casa decimal em cima da barra
-        )
-
-        # Customização opcional: deixa as barras com o roxo da sua identidade visual (#49378C)
-        fig_barras.update_traces(marker_color='#49378C')
-        
-        # Renderiza o novo gráfico no Streamlit
-        st.plotly_chart(fig_barras, use_container_width=True)
-        
-    else:
-        st.warning('Não foram encontrados dados de pontuação válidos nas tarefas para gerar o gráfico.')
+    df_plot = df_t.merge(df_d, left_on='disc_id', right_on='id', suffixes=('_t', '_d'))
+    # Re-enabled plotly if available, else fallback
+    try:
+        import plotly.express as px
+        fig = px.bar(df_plot, x='nome_t', y='nota', color='nome_d',
+                     title='Minhas Notas por Matéria', text_auto=True)
+        st.plotly_chart(fig, use_container_width=True)
+    except ImportError:
+        st.bar_chart(df_plot.set_index('nome_t')['nota'])
 
 # ------------------------------------------
 # ESTRUTURA PRINCIPAL DE NAVEGAÇÃO
@@ -630,55 +643,6 @@ def modulo_dashboard():
 def main():
     st.set_page_config(page_title='EduTrack AI', layout='wide')
 
-    # ------------------------------------------
-    # CONFIGURAÇÃO DE ESTILOS PERSONALIZADOS
-    # ------------------------------------------
-
-    # Adicione isso logo abaixo de st.set_page_config(page_title='EduTrack AI', layout='wide')
-    st.markdown(
-        """
-        <style>
-        /* 1. Elementos da Barra Lateral */
-        [data-testid="stSidebar"] h1 {
-            color: #49378C !important;
-            font-weight: 700 !important;
-        }
-        [data-testid="stSidebar"] hr {
-            border-color: #5F50BF !important;
-        }
-
-        /* 2. Todos os botões do App (Padrão e Container) */
-        button[data-testid="stBaseButton-secondary"], 
-        .stButton>button, 
-        button[form="login_form"] {
-            background-color: #49378C !important;
-            color: white !important;
-            border: 1px solid #49378C !important;
-            border-radius: 8px !important;
-        }
-        
-        /* Efeito de passar o mouse no botão */
-        button[data-testid="stBaseButton-secondary"]:hover, 
-        .stButton>button:hover {
-            background-color: #5F50BF !important;
-            border-color: #5F50BF !important;
-            color: white !important;
-        }
-
-        /* 3. Radio Buttons (Bolinhas de seleção) */
-        /* Altera a cor do círculo preenchido */
-        div[data-testid="stRadio"] input[type="radio"]:checked + div {
-            background-color: #49378C !important;
-            border-color: #49378C !important;
-        }
-        /* Altera a cor da borda ao redor do rádio ativo */
-        div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
-            border-color: #49378C !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
     # Tenta recuperar o token do cookie NO INÍCIO do script
     if 'logged_in' not in st.session_state or not st.session_state.logged_in:
         cookie_token = st.context.cookies.get('auth_token')
@@ -707,7 +671,7 @@ def main():
 
         with st.sidebar:
             st.title('EduTrack AI')
-            menu = st.radio('Gerenciar:', ['Painel Geral', 'Professores', 'Disciplinas', 'Tarefas/Notas', 'Projetos'])
+            menu = st.radio('Gerenciar:', ['Painel Geral', 'Professores', 'Disciplinas', 'Tarefas/Notas', 'Projetos', 'Minhas provas'])
             st.markdown('---')
             if st.button('Sair'):
                 st.session_state.clear()
@@ -720,8 +684,8 @@ def main():
            case 'Professores': modulo_professores()
            case 'Disciplinas': modulo_disciplinas()
            case 'Tarefas/Notas': modulo_tarefas()
-            
-
+           case 'Minhas provas': modulo_provas()
+           
 
 if __name__ == "__main__":
     main()
