@@ -67,48 +67,27 @@ def tela_acesso():
             pass_c = st.text_input('Senha', type='password')
 
             if st.form_submit_button('Cadastrar'):
-                nome = util.limpar_texto(nome)
-                email_c = util.limpar_texto(email_c)
-                pass_c = util.limpar_texto(pass_c)
+                v_nome=util.valida_nome(nome)
+                v_email=util.valida_email(email_c)
+                v_pass=util.valida_senha(pass_c)
 
-                erros_nome = util.valida_nome(nome)
-                if erros_nome:
-                    placeholder_nome = st.empty()
-                    with placeholder_nome.container():
-                        for erro in erros_nome:
-                            st.error(erro)
-                    time.sleep(10)
-                    placeholder_nome.empty()
-                elif not util.valida_email(email_c):
-                    placeholder_email = st.empty()
-                    placeholder_email.error('E-mail inválido. Deve conter no minimo 2 caracteres antes do arroba (@), exatamente um arroba (@) e pelo menos um ponto (.)')
-                    time.sleep(10)
-                    placeholder_email.empty()
-                else:
-                    erros = util.valida_senha(pass_c)
-                    if erros:
-                        placeholder_erros = st.empty()
-                        with placeholder_erros.container():
-                            for erro in erros:
-                                st.error(erro)
-                        time.sleep(10)
-                        placeholder_erros.empty()
+                if v_nome and v_email and v_pass:
+
+                    res = requests.post(f'{api.BASE_URL}/auth/signup', json={'name': nome, 'email': email_c, 'password': pass_c})
+                    if res.status_code == 200:
+                        st.success('Conta criada! Agora faça o login.')
+                        time.sleep(2)
+                        js_code = """
+                            <script>
+                            window.parent.location.reload();
+                            </script>
+                        """
+                        components.html(js_code, height=0)
                     else:
-                        res = requests.post(f'{api.BASE_URL}/auth/signup', json={'name': nome, 'email': email_c, 'password': pass_c})
-                        if res.status_code == 200:
-                            st.success('Conta criada! Agora faça o login.')
-                            time.sleep(2)
-                            js_code = """
-                                <script>
-                                window.parent.location.reload();
-                                </script>
-                            """
-                            components.html(js_code, height=0)
-                        else:
-                            placeholder_signup = st.empty()
-                            placeholder_signup.error('Erro ao cadastrar usuário.')
-                            time.sleep(10)
-                            placeholder_signup.empty()
+                        placeholder_signup = st.empty()
+                        placeholder_signup.error('Erro ao cadastrar usuário.')
+                        time.sleep(10)
+                        placeholder_signup.empty()
 
 # ------------------------------------------------
 # MÓDULOS CRUD PARA PROFESSORES, DISCIPLINAS
