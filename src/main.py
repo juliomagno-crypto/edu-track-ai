@@ -246,10 +246,10 @@ def modulo_professores():
     else:
         st.info('Nenhum professor cadastrado ainda.')
 
-# GESTÃO DE DISCIPLINAS
+# GESTÃO DE DISCIPLINAS (COLE ISSO NO SEU MAIN.PY PRINCIPAL)
 
 def modulo_disciplinas():
-    st.header('Minhas Disciplina')
+    st.header('Minhas Disciplinas')
     profs = api.api_get('professores')
 
     if not profs:
@@ -262,7 +262,6 @@ def modulo_disciplinas():
             nome_d = st.text_input('Nome da Matéria')
             
             profs = api.api_get('professores')
-            # Formata o rótulo para exibir Nome | Email
             opcoes_p = {f"{p['nome']} | {p.get('email', 'S/ E-mail')}": p['id'] for p in profs} if profs else {}
             p_escolhido = st.selectbox('Professor Responsável', options=list(opcoes_p.keys()))
             
@@ -286,7 +285,7 @@ def modulo_disciplinas():
                 else:
                     api.api_post('disciplinas', {
                         'nome': nome_d, 
-                        'prof_id': opcoes_p[p_escolhido],
+                        'professores_id': opcoes_p[p_escolhido],
                         'carga_horaria': carga_horaria,
                         'max_faltas': max_faltas,
                         'faltas': faltas,
@@ -305,33 +304,47 @@ def modulo_disciplinas():
         df_d = pd.DataFrame(discs)
         df_p = pd.DataFrame(profs)
         
-        # Verifica se a coluna 'prof_id' existe para evitar erro no merge
-        if 'prof_id' in df_d.columns:
-            # Junta os nomes para exibição
+        if 'professores_id' in df_d.columns:
+            df_d['prof_id'] = df_d['professores_id']
+        
+        if 'prof_id' in df_d.columns and 'id' in df_p.columns:
             df_view = df_d.merge(df_p[['id', 'nome']], left_on='prof_id', right_on='id', suffixes=('', '_prof'))
             
-            # Reorganiza as colunas conforme solicitado
-            # nome da disciplina, nome do professor, carga horaria, limite de faltas, faltas, nota e horario
-            cols_to_show = ['nome', 'nome_prof', 'carga_horaria', 'max_faltas', 'faltas', 'nota', 'horario']
+            colunas_banco = ['nome', 'nome_prof', 'carga_horaria', 'max_faltas', 'limite_falta', 'faltas', 'nota', 'dia_semana', 'dia', 'horario']
+            cols_existentes = [c for c in colunas_banco if c in df_view.columns]
+            df_filtrado = df_view[cols_existentes].copy()
             
-            # Filtra apenas as colunas que realmente existem no DataFrame resultante para evitar novos erros
-            cols_existentes = [c for c in cols_to_show if c in df_view.columns]
+            nomes_amigaveis = {
+                'nome': 'Nome da Disciplina',
+                'nome_prof': 'Professor',
+                'carga_horaria': 'Carga Horária',
+                'max_faltas': 'Limite de Faltas',
+                'limite_falta': 'Limite de Faltas',
+                'faltas': 'Faltas Atuais',
+                'nota': 'Nota',
+                'dia_semana': 'Dia',
+                'dia': 'Dia',
+                'horario': 'Horário'
+            }
             
-            st.dataframe(df_view[cols_existentes], use_container_width=True, hide_index=True)
+            df_filtrado = df_filtrado.rename(columns=nomes_amigaveis)
+            df_filtrado = df_filtrado.loc[:, ~df_filtrado.columns.duplicated()]
+            
+            st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
         else:
-            st.warning('Aviso: Os dados das disciplinas parecem estar incompletos (faltando prof_id).')
+            st.warning('Aviso: Não foi possível associar os professores às disciplinas.')
             st.dataframe(df_d, use_container_width=True, hide_index=True)
 
-        # [D]ELETE
-        id_del = st.number_input('ID para remover', min_value=1, step=1)
-        if st.button('Remover Disciplina', type='primary'):
-            api.api_delete('disciplinas', id_del)
-            st.rerun()
-
+    # [D]ELETE
+    id_del = st.number_input('ID para remover', min_value=1, step=1)
+    if st.button('Remover Disciplina', type='primary'):
+        api.api_delete('disciplinas', id_del)
+        st.rerun()
+# GESTÃO DE TAREFAS ---
 # GESTÃO DE TAREFAS ---
 
 def modulo_tarefas():
-    st.header('Minhas Tarefas e Notas')
+    st.header('Minhas Tarefas')
     discs = api.api_get('disciplinas')
 
     if not discs:
@@ -339,27 +352,201 @@ def modulo_tarefas():
         return
 
     # [C]REATE
-    with st.expander('➕ Lançar Atividade/Nota'):
-        nome_t = st.text_input('Nome da Atividade')
+    with st.expander('➕ Nova Tarefa'):
+        nome = st.text_input('Nome da Tarefa')
+        tipo = st.selectbox('Tipo', ['Acadêmico', 'Pessoal'])
+        status = st.selectbox('Status', ['Pendente', 'Em andamento', 'Entregue', 'Atrasado'])
+        descricao = st.text_area('Descrição')
+        data_atribuicao = st.date_input('Data de Atribuição')
+        data_entrega = st.date_input('Data de Entrega')
+        link = st.text_input('Link (opcional)')
+
         opcoes_d = {d['nome']: d['id'] for d in discs}
-        d_escolhida = st.selectbox('Selecione a Disciplina', options=list(opcoes_d.keys()))
-        nota = st.number_input('Nota Obtida', 0.0, 10.0, 0.0)
-        if st.button('Registrar Nota'):
-            api.api_post('tarefas', {'nome': nome_t, 'disc_id': opcoes_d[d_escolhida], 'nota': nota})
-            st.rerun()
+        d_escolhida = st.selectbox('Disciplina', options=list(opcoes_d.keys()))
+
+        projetos_id = None
+        projetos = api.api_get('projetos')
+        if projetos:
+            opcoes_p = {p['nome']: p['id'] for p in projetos}
+            p_escolhido = st.selectbox('Projeto Vinculado', options=['(nenhum)'] + list(opcoes_p.keys()))
+            if p_escolhido != '(nenhum)':
+                projetos_id = opcoes_p[p_escolhido]
+
+        pontuacao = st.number_input('Pontuação', min_value=0.0, max_value=10.0, step=0.1)
+
+        if st.button('Cadastrar Tarefa'):
+            if not nome:
+                st.error('O nome da tarefa é obrigatório.')
+            else:
+                api.api_post('tarefas', {
+                    'nome': nome,
+                    'tipo': tipo,
+                    'status': status,
+                    'descricao': descricao,
+                    'data_atribuicao': data_atribuicao.isoformat(),
+                    'data_entrega': data_entrega.isoformat(),
+                    'link': link,
+                    'pontuacao': pontuacao,
+                    'disc_id': opcoes_d[d_escolhida],
+                    'projetos_id': projetos_id
+                })
+                st.success('Tarefa cadastrada com sucesso!')
+                st.rerun()
 
     # [R]EAD
     tarefas = api.api_get('tarefas')
     if tarefas:
-        df_t = pd.DataFrame(tarefas)
-        st.subheader('Quadro de Notas')
-        st.dataframe(df_t[['id', 'nome', 'nota']], use_container_width=True, hide_index=True)
+        df = pd.DataFrame(tarefas)
+        st.subheader('Suas Tarefas')
+
+        # 🟢 CORREÇÃO DO KEYERROR: Garante mapeamento seguro de 'pontuacao' para 'nota'
+        if 'pontuacao' in df.columns and 'nota' not in df.columns:
+            df['nota'] = df['pontuacao']
+
+        # Filtra apenas as colunas que realmente existem de forma segura
+        colunas_desejadas = ['id', 'nome', 'tipo', 'status', 'nota', 'data_entrega', 'link']
+        colunas_validas = [c for c in colunas_desejadas if c in df.columns]
+        
+        df_visualizacao = df[colunas_validas].copy()
+        
+        if 'data_entrega' in df_visualizacao.columns:
+            df_visualizacao['data_entrega'] = pd.to_datetime(df_visualizacao['data_entrega']).dt.date
+        
+        # [U]PDATE
+        df_editado = st.data_editor(
+            df_visualizacao,
+            column_config={
+                'id': st.column_config.NumberColumn('ID', disabled=True, width='small'),
+                'nome': st.column_config.TextColumn('Nome da Tarefa'),
+                'status': st.column_config.SelectboxColumn(
+                    'Status', options=['Pendente', 'Em andamento', 'Entregue', 'Atrasado']
+                ),
+                'tipo': st.column_config.SelectboxColumn(
+                    'Tipo', options=['Acadêmico', 'Pessoal']
+                ),
+                'data_entrega': st.column_config.DateColumn('Data de Entrega'),
+                'nota': st.column_config.NumberColumn('Nota / Pontuação', min_value=0.0, max_value=10.0),
+                'link': st.column_config.TextColumn('Link')
+            },
+            use_container_width=True,
+            hide_index=True,
+            num_rows='dynamic',
+            key="editor_tarefas"
+        )
+
+        if st.button('Salvar Alterações em Tarefas'):
+            estado_editor = st.session_state.get("editor_tarefas", {})
+            linhas_editadas = estado_editor.get("edited_rows", {})
+
+            if linhas_editadas:
+                for idx_linha, alteracoes in linhas_editadas.items():
+                    tarefa_id = int(df_visualizacao.iloc[idx_linha]['id'])
+                    
+                    if 'data_entrega' in alteracoes and alteracoes['data_entrega']:
+                        alteracoes['data_entrega'] = str(alteracoes['data_entrega'])
+                    
+                    # 🟢 TRADUÇÃO DE VOLTA PARA A API: Se editou a 'nota', envia como 'pontuacao'
+                    if 'nota' in alteracoes:
+                        alteracoes['pontuacao'] = alteracoes.pop('nota')
+                        
+                    api.api_patch('tarefas', tarefa_id, alteracoes)
+                st.success('Tarefas atualizadas!')
+                st.rerun()
+            else:
+                st.info('Nenhuma alteração detectada.')
 
         # [D]ELETE
-        id_del_t = st.number_input('ID da Tarefa para remover', min_value=1, step=1)
-        if st.button('Remover Tarefa'):
-            api.api_delete('tarefas', id_del_t)
+        id_del = st.number_input('ID da tarefa para remover', min_value=1, step=1)
+        if st.button('Remover Tarefa', type='primary'):
+            api.api_delete('tarefas', id_del)
+            st.success('Tarefa removida!')
             st.rerun()
+    else:
+        st.info('Nenhuma tarefa cadastrada ainda.')
+
+# GESTÃO DE PROVAS
+def modulo_provas():
+    st.header('Minhas Provas')
+    discs = api.api_get('disciplinas')
+
+    if not discs:
+        st.warning('Cadastre uma disciplina primeiro.')
+        return
+
+    # [C]REATE
+    with st.expander('➕ Nova Prova'):
+        conteudo = st.text_area('Conteúdo da Prova')
+        data = st.date_input('Data da Prova')
+        horario = st.text_input('Horário (ex: 19:30)')
+        
+        opcoes_d = {d['nome']: d['id'] for d in discs}
+        d_escolhida = st.selectbox('Disciplina', options=list(opcoes_d.keys()))
+        
+        nota = st.number_input('Nota', min_value=0.0, max_value=10.0, step=0.1)
+
+        if st.button('Cadastrar Prova'):
+            if not conteudo:
+                st.error('O conteúdo da prova é obrigatório.')
+            else:
+                api.api_post('provas', {
+                    'conteudo': conteudo,
+                    'data': data.isoformat(),
+                    'horario': horario,
+                    'nota': nota,
+                    'disciplinas_id': opcoes_d[d_escolhida]
+                })
+                st.success('Prova cadastrada com sucesso!')
+                st.rerun()
+
+    # [R]EAD
+    provas = api.api_get('provas')
+    if provas:
+        df = pd.DataFrame(provas)
+        st.subheader('Suas Provas')
+
+        # [U]PDATE
+        df_visualizacao = df[['id', 'conteudo', 'data', 'horario', 'nota']].copy()
+        df_visualizacao['data'] = pd.to_datetime(df_visualizacao['data']).dt.date
+        
+        df_editado = st.data_editor(
+            df_visualizacao,
+            column_config={
+                'id': st.column_config.NumberColumn('ID', disabled=True, width='small'),
+                'conteudo': st.column_config.TextColumn('Conteúdo'),
+                'data': st.column_config.DateColumn('Data'),
+                'horario': st.column_config.TextColumn('Horário'),
+                'nota': st.column_config.NumberColumn('Nota', min_value=0.0, max_value=10.0),
+            },
+            use_container_width=True,
+            hide_index=True,
+            num_rows='dynamic',
+            key="editor_provas"
+        )
+
+        if st.button('Salvar Alterações em Provas'):
+            estado_editor = st.session_state.get("editor_provas", {})
+            linhas_editadas = estado_editor.get("edited_rows", {})
+
+            if linhas_editadas:
+                for idx_linha, alteracoes in linhas_editadas.items():
+                    prova_id = int(df_visualizacao.iloc[idx_linha]['id'])
+                    if 'data' in alteracoes and alteracoes['data']:
+                        alteracoes['data'] = str(alteracoes['data'])
+                    api.api_patch('provas', prova_id, alteracoes)
+                st.success('Provas atualizadas!')
+                st.rerun()
+            else:
+                st.info('Nenhuma alteração detectada.')
+
+        # [D]ELETE
+        id_del = st.number_input('ID da prova para remover', min_value=1, step=1)
+        if st.button('Remover Prova', type='primary'):
+            api.api_delete('provas', id_del)
+            st.success('Prova removida!')
+            st.rerun()
+    else:
+        # 🟢 ALINHAMENTO CORRIGIDO: O info agora aparece corretamente se não houver registros.
+        st.info('Nenhuma prova cadastrada ainda.')
 
 # --- DASHBOARD ---
 

@@ -7,6 +7,8 @@ import ultilitario as util # Lib local
 import time
 import requests
 from datetime import datetime, timedelta
+from src.main import tela_acesso
+
 BASE_URL = 'https://x8ki-letl-twmt.n7.xano.io/api:FzC8bz6B'
 
 def set_cookie(name, value, days=30):
@@ -231,17 +233,19 @@ def modulo_professores():
     else:
         st.info('Nenhum professor cadastrado ainda.')
 
-# GESTÃO DE DISCIPLINAS
+# ==================================================================
+# GESTÃO DE DISCIPLINAS (CORRIGIDO)
+# ==================================================================
 
 def modulo_disciplinas():
-    st.header('Minhas Disciplina')
+    st.header('Minhas Disciplinas')
     profs = api.api_get('professores')
 
     if not profs:
         st.warning('Cadastre um professor antes de criar disciplinas.')
         return
 
-    # [C]REATE
+    # [C]REATE - Nova Disciplina
     with st.expander('➕ Nova Disciplina'):
         nome_d = st.text_input('Nome da Matéria')
         opcoes_p = {p['nome']: p['id'] for p in profs}
@@ -251,13 +255,18 @@ def modulo_disciplinas():
             api.api_post('disciplinas', {'nome': nome_d, 'professores_id': opcoes_p[p_escolhido]})
             st.rerun()
 
-    # [R]EAD
+    # [R]EAD & UPDATE
     discs = api.api_get('disciplinas')
     profs = api.api_get('professores')
+    
     if discs:
-    # Garante a criação correta dos DataFrames convertendo os dados da API
+        # Garante a criação correta dos DataFrames convertendo os dados da API
         df_d = pd.DataFrame(list(discs))
         df_p = pd.DataFrame(list(profs)) 
+
+        # 🟢 CORREÇÃO DO AVISO AMARELO: Injeta o prof_id esperado pelo resto do sistema
+        if 'professores_id' in df_d.columns:
+            df_d['prof_id'] = df_d['professores_id']
 
         # Validação de segurança: verifica se as colunas realmente existem no df_p
         if 'id' in df_p.columns and 'nome' in df_p.columns:
@@ -267,87 +276,101 @@ def modulo_disciplinas():
                 right_on='id',           
                 suffixes=('', '-Professor')
             )
-            # Exibe os nomes na tela
-            st.dataframe(df_view[['nome', 'nome-Professor']], use_container_width=True, hide_index=True)
-        else:
-            # Se as colunas não forem encontradas, mostra o que veio da API para diagnosticar
-            st.error("As colunas 'id' e 'nome' não foram encontradas na tabela de professores.")
-            st.write("Colunas detectadas em professores:", list(df_p.columns))
-            st.write("Dados brutos de professores:", profs)
-
-    # UPDATE    
-    if 'edit_disc' not in st.session_state:
-        st.session_state.edit_disc = False
-
-    
-    # Mostramos ID, Nome da Matéria, ID do Professor e o Nome do Professor Atual
-    df_editado = st.data_editor(
-        df_view[['id', 'nome', 'professores_id', 'nome-Professor']],
-        column_config={
-            'id': st.column_config.NumberColumn("ID", disabled=True, width="small"),
-            'nome': st.column_config.TextColumn("Nome da Disciplina"),
-            'professores_id': st.column_config.NumberColumn("ID do Professor"),
-            'nome-Professor': st.column_config.TextColumn("Professor Atual", disabled=True),
-        },
-        use_container_width=True,
-        hide_index=True,
-        num_rows='dynamic' if st.session_state.edit_disc else None,
-        disabled=not st.session_state.edit_disc,
-        key="disc_editor"
-    )
-
-    # Captura o estado do editor para gerenciar os Deletes da lixeira
-    mudar_estado = st.session_state.get("disc_editor", {"deleted_rows": []})
-
-    # Container para os botões no canto inferior direito
-    col_espaco, col_save, col_del, col_cancel = st.columns([0.4, 0.2, 0.2, 0.2])
-    with col_save:
-        if not st.session_state.edit_disc:
-            if st.button('Editar ✏️', use_container_width=True):
-                st.session_state.edit_disc = True
-                st.rerun()
-        else:
-            if st.button('Salvar ✅', use_container_width=True):
-                erros_validacao = []
-                
-                # 1. Validação dos dados que restaram na tabela
-                for index, row in df_editado.iterrows():
-                    nome_val = util.limpar_texto(str(row['nome']))
-                    
-                    if not nome_val or nome_val == "none":
-                        erros_validacao.append(f"Linha {index + 1}: O nome da disciplina não pode ser vazio.")
-
-                if erros_validacao:
-                    for erro in erros_validacao:
-                        st.error(erro)
-                else:
-                    # 2. Processa as exclusões (Lixeira) primeiro
-                    if mudar_estado and mudar_estado.get("deleted_rows"):
-                        for linha_index in mudar_estado["deleted_rows"]:
-                            id_para_deletar = df_view.iloc[linha_index]["id"]
-                            api.api_delete('disciplinas', id_para_deletar)
-
-                    # 3. Atualiza os registros que continuam na tabela (Update/PATCH)
-                    for _, row in df_editado.iterrows():
-                        if 'id' in row and row['id']:
-                            # Garante que o ID do professor seja um número inteiro válido ou nulo
-                            prof_id_val = int(row['professores_id']) if pd.notna(row['professores_id']) else None
-                            
-                            api.api_patch('disciplinas', row['id'], {
-                                'nome': util.limpar_texto(str(row['nome'])),
-                                'professores_id': prof_id_val
-                            })
-                            
-                    st.success('Dados sincronizados!')
-                    st.session_state.edit_disc = False
-                    time.sleep(1)
-                    st.rerun()
-                    
-            if st.button('Cancelar ❌', use_container_width=True):
+            
+            # Gerencia o estado de edição
+            if 'edit_disc' not in st.session_state:
                 st.session_state.edit_disc = False
-                st.rerun()
+
+            # --- MODO EDIÇÃO ATIVO ---
+            if st.session_state.edit_disc:
+                st.subheader('Modo de Edição de Disciplinas')
+                df_editado = st.data_editor(
+                    df_view[['id', 'nome', 'professores_id', 'nome-Professor']],
+                    column_config={
+                        'id': st.column_config.NumberColumn("ID", disabled=True, width="small"),
+                        'nome': st.column_config.TextColumn("Nome da Disciplina"),
+                        'professores_id': st.column_config.NumberColumn("ID do Professor"),
+                        'nome-Professor': st.column_config.TextColumn("Professor Atual", disabled=True),
+                    },
+                    use_container_width=True,
+                    hide_index=True,
+                    num_rows='dynamic',
+                    key="disc_editor"
+                )
+            
+            # --- MODO VISUALIZAÇÃO LIMPA (O que você queria!) ---
             else:
-                st.info('Nenhuma disciplina cadastrada ainda.')
+                # Filtra apenas as colunas amigáveis ao usuário
+                colunas_para_mostrar = ['nome', 'carga_horaria', 'limite_falta', 'faltas', 'nota', 'dia', 'horario']
+                colunas_validas = [col for col in colunas_para_mostrar if col in df_view.columns]
+                
+                df_filtrado = df_view[colunas_validas].copy()
+
+                # Renomeia os cabeçalhos para o português correto
+                df_filtrado = df_filtrado.rename(columns={
+                    'nome': 'Nome da Disciplina',
+                    'carga_horaria': 'Carga Horária',
+                    'limite_falta': 'Limite de Faltas',
+                    'faltas': 'Faltas Atuais',
+                    'nota': 'Nota',
+                    'dia': 'Dia da Semana',
+                    'horario': 'Horário'
+                })
+
+                st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+
+            # --- PAINEL DE BOTÕES DE CONTROLE ---
+            mudar_estado = st.session_state.get("disc_editor", {"deleted_rows": []})
+            col_espaco, col_save, col_del, col_cancel = st.columns([0.4, 0.2, 0.2, 0.2])
+            
+            with col_save:
+                if not st.session_state.edit_disc:
+                    if st.button('Editar ✏️', use_container_width=True):
+                        st.session_state.edit_disc = True
+                        st.rerun()
+                else:
+                    if st.button('Salvar ✅', use_container_width=True):
+                        erros_validacao = []
+                        
+                        for index, row in df_editado.iterrows():
+                            nome_val = util.limpar_texto(str(row['nome']))
+                            if not nome_val or nome_val == "none":
+                                erros_validacao.append(f"Linha {index + 1}: O nome da disciplina não pode ser vazio.")
+
+                        if erros_validacao:
+                            for erro in erros_validacao:
+                                st.error(erro)
+                        else:
+                            # Processa exclusões da lixeira
+                            if mudar_estado and mudar_estado.get("deleted_rows"):
+                                for linha_index in mudar_estado["deleted_rows"]:
+                                    id_para_deletar = df_view.iloc[linha_index]["id"]
+                                    api.api_delete('disciplinas', id_para_deletar)
+
+                            # Processa atualizações (PATCH)
+                            for _, row in df_editado.iterrows():
+                                if 'id' in row and row['id']:
+                                    prof_id_val = int(row['professores_id']) if pd.notna(row['professores_id']) else None
+                                    api.api_patch('disciplinas', row['id'], {
+                                        'nome': util.limpar_texto(str(row['nome'])),
+                                        'professores_id': prof_id_val
+                                    })
+                                    
+                            st.success('Dados sincronizados!')
+                            st.session_state.edit_disc = False
+                            time.sleep(1)
+                            st.rerun()
+                            
+            with col_cancel:
+                if st.session_state.edit_disc:
+                    if st.button('Cancelar ❌', use_container_width=True):
+                        st.session_state.edit_disc = False
+                        st.rerun()
+                        
+        else:
+            st.error("As colunas 'id' e 'nome' não foram encontradas na tabela de professores.")
+    else:
+        st.info('Nenhuma disciplina cadastrada ainda.')
 
 # GESTÃO DE TAREFAS ---
 
@@ -373,7 +396,7 @@ def modulo_tarefas():
         d_escolhida = st.selectbox('Disciplina', options=list(opcoes_d.keys()))
 
         projetos_id = None
-        projetos =api.api_get('projetos')
+        projetos = api.api_get('projetos')
         if projetos:
             opcoes_p = {p['nome']: p['id'] for p in projetos}
             p_escolhido = st.selectbox('Projeto Vinculado', options=['(nenhum)'] + list(opcoes_p.keys()))
@@ -407,14 +430,25 @@ def modulo_tarefas():
         df = pd.DataFrame(tarefas)
         st.subheader('Suas Tarefas')
 
-        # [U]PDATE
-        df_visualizacao = df[['id', 'nome', 'tipo', 'status', 'pontuacao', 'data_entrega', 'link']].copy()
-        df_visualizacao['data_entrega'] = pd.to_datetime(df_visualizacao['data_entrega']).dt.date
+        # 🟢 CORREÇÃO DO KEYERROR: Garante mapeamento seguro de 'pontuacao' para 'nota'
+        if 'pontuacao' in df.columns and 'nota' not in df.columns:
+            df['nota'] = df['pontuacao']
+
+        # Filtra apenas as colunas que realmente existem de forma segura
+        colunas_desejadas = ['id', 'nome', 'tipo', 'status', 'nota', 'data_entrega', 'link']
+        colunas_validas = [c for c in colunas_desejadas if c in df.columns]
         
+        df_visualizacao = df[colunas_validas].copy()
+        
+        if 'data_entrega' in df_visualizacao.columns:
+            df_visualizacao['data_entrega'] = pd.to_datetime(df_visualizacao['data_entrega']).dt.date
+        
+        # [U]PDATE
         df_editado = st.data_editor(
             df_visualizacao,
             column_config={
                 'id': st.column_config.NumberColumn('ID', disabled=True, width='small'),
+                'nome': st.column_config.TextColumn('Nome da Tarefa'),
                 'status': st.column_config.SelectboxColumn(
                     'Status', options=['Pendente', 'Em andamento', 'Entregue', 'Atrasado']
                 ),
@@ -422,7 +456,8 @@ def modulo_tarefas():
                     'Tipo', options=['Acadêmico', 'Pessoal']
                 ),
                 'data_entrega': st.column_config.DateColumn('Data de Entrega'),
-                'pontuacao': st.column_config.NumberColumn('Pontuação', min_value=0.0, max_value=10.0),
+                'nota': st.column_config.NumberColumn('Nota / Pontuação', min_value=0.0, max_value=10.0),
+                'link': st.column_config.TextColumn('Link')
             },
             use_container_width=True,
             hide_index=True,
@@ -437,8 +472,14 @@ def modulo_tarefas():
             if linhas_editadas:
                 for idx_linha, alteracoes in linhas_editadas.items():
                     tarefa_id = int(df_visualizacao.iloc[idx_linha]['id'])
+                    
                     if 'data_entrega' in alteracoes and alteracoes['data_entrega']:
                         alteracoes['data_entrega'] = str(alteracoes['data_entrega'])
+                    
+                    # 🟢 TRADUÇÃO DE VOLTA PARA A API: Se editou a 'nota', envia como 'pontuacao'
+                    if 'nota' in alteracoes:
+                        alteracoes['pontuacao'] = alteracoes.pop('nota')
+                        
                     api.api_patch('tarefas', tarefa_id, alteracoes)
                 st.success('Tarefas atualizadas!')
                 st.rerun()
@@ -523,7 +564,7 @@ def modulo_provas():
                     if 'data' in alteracoes and alteracoes['data']:
                         alteracoes['data'] = str(alteracoes['data'])
                     api.api_patch('provas', prova_id, alteracoes)
-                st.success('Provas updated!')
+                st.success('Provas atualizadas!')
                 st.rerun()
             else:
                 st.info('Nenhuma alteração detectada.')
@@ -534,30 +575,53 @@ def modulo_provas():
             api.api_delete('provas', id_del)
             st.success('Prova removida!')
             st.rerun()
-        else:
-            st.info('Nenhuma prova cadastrada ainda.')
-
+    else:
+        # 🟢 ALINHAMENTO CORRIGIDO: O info agora aparece corretamente se não houver registros.
+        st.info('Nenhuma prova cadastrada ainda.')
+        
 # --- DASHBOARD ---
 
 def modulo_dashboard():
     st.header('Resumo de Desempenho')
     tarefas = api.api_get('tarefas')
     discs = api.api_get('disciplinas')
+    
     if not tarefas or not discs:
-        st.info('Cadastre dados para visualizar seu desempenho gráfico.')
+        st.info('Cadastre dados de tarefas e disciplinas para visualizar seu desempenho gráfico.')
         return
 
+    # Converte os dados para DataFrames do Pandas
     df_t = pd.DataFrame(tarefas)
     df_d = pd.DataFrame(discs)
-    df_plot = df_t.merge(df_d, left_on='disc_id', right_on='id', suffixes=('_t', '_d'))
-    # Re-enabled plotly if available, else fallback
-    try:
-        import plotly.express as px
-        fig = px.bar(df_plot, x='nome_t', y='nota', color='nome_d',
-                     title='Minhas Notas por Matéria', text_auto=True)
-        st.plotly_chart(fig, use_container_width=True)
-    except ImportError:
-        st.bar_chart(df_plot.set_index('nome_t')['nota'])
+    
+    # Valida se existem as colunas necessárias para o cálculo de notas
+    if 'pontuacao' in df_t.columns and 'disc_id' in df_t.columns:
+        # Junta as tarefas com as disciplinas correspondentes
+        df_plot = df_t.merge(df_d, left_on='disc_id', right_on='id', suffixes=('_tarefa', '_disciplina'))
+        
+        # Agrupa por nome da disciplina e calcula a média das notas
+        df_notas = df_plot.groupby('nome_disciplina')['pontuacao'].mean().reset_index()
+        df_notas = df_notas.rename(columns={'pontuacao': 'Média de Notas', 'nome_disciplina': 'Disciplina'})
+        
+        st.subheader('Distribuição de Notas por Disciplina')
+        
+        # 🟢 NOVO: Criação do Gráfico de Barras usando Plotly Express
+        fig_barras = px.bar(
+            df_notas, 
+            x='Disciplina', 
+            y='Média de Notas', 
+            title='Média de Notas por Disciplina',
+            text_auto='.1f' # Mostra a nota com uma casa decimal em cima da barra
+        )
+
+        # Customização opcional: deixa as barras com o roxo da sua identidade visual (#49378C)
+        fig_barras.update_traces(marker_color='#49378C')
+        
+        # Renderiza o novo gráfico no Streamlit
+        st.plotly_chart(fig_barras, use_container_width=True)
+        
+    else:
+        st.warning('Não foram encontrados dados de pontuação válidos nas tarefas para gerar o gráfico.')
 
 # ------------------------------------------
 # ESTRUTURA PRINCIPAL DE NAVEGAÇÃO
@@ -566,6 +630,55 @@ def modulo_dashboard():
 def main():
     st.set_page_config(page_title='EduTrack AI', layout='wide')
 
+    # ------------------------------------------
+    # CONFIGURAÇÃO DE ESTILOS PERSONALIZADOS
+    # ------------------------------------------
+
+    # Adicione isso logo abaixo de st.set_page_config(page_title='EduTrack AI', layout='wide')
+    st.markdown(
+        """
+        <style>
+        /* 1. Elementos da Barra Lateral */
+        [data-testid="stSidebar"] h1 {
+            color: #49378C !important;
+            font-weight: 700 !important;
+        }
+        [data-testid="stSidebar"] hr {
+            border-color: #5F50BF !important;
+        }
+
+        /* 2. Todos os botões do App (Padrão e Container) */
+        button[data-testid="stBaseButton-secondary"], 
+        .stButton>button, 
+        button[form="login_form"] {
+            background-color: #49378C !important;
+            color: white !important;
+            border: 1px solid #49378C !important;
+            border-radius: 8px !important;
+        }
+        
+        /* Efeito de passar o mouse no botão */
+        button[data-testid="stBaseButton-secondary"]:hover, 
+        .stButton>button:hover {
+            background-color: #5F50BF !important;
+            border-color: #5F50BF !important;
+            color: white !important;
+        }
+
+        /* 3. Radio Buttons (Bolinhas de seleção) */
+        /* Altera a cor do círculo preenchido */
+        div[data-testid="stRadio"] input[type="radio"]:checked + div {
+            background-color: #49378C !important;
+            border-color: #49378C !important;
+        }
+        /* Altera a cor da borda ao redor do rádio ativo */
+        div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
+            border-color: #49378C !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
     # Tenta recuperar o token do cookie NO INÍCIO do script
     if 'logged_in' not in st.session_state or not st.session_state.logged_in:
         cookie_token = st.context.cookies.get('auth_token')
