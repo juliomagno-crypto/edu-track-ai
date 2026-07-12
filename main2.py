@@ -27,15 +27,292 @@ def delete_cookie(name):
         </script>
     """
     components.html(js_code, height=0)
+col_botao, _ = st.columns([0.2, 0.8])
+
 def aplicar_tema_claro():
-    return st.markdown( """
-            <style>
-            .stApp {
-                background-color: #F0F2F6;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+    /* Botões */
+.stButton > button,
+div[data-testid="stFormSubmitButton"] > button {
+
+    background-color: #D9DCE1 !important;
+    color: white !important;
+    border: 1px solid #BFC5CC !important;
+}
+
+/* Hover */
+.stButton > button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover {
+
+    background-color: #D9DCE1 !important;
+    color: white !important;
+    border: 1px solid #BFC5CC !important;
+}
+
+/* Clique */
+.stButton > button:active,
+div[data-testid="stFormSubmitButton"] > button:active {
+
+    background-color: #D9DCE1 !important;
+    color: white !important;
+}
+
+/* Foco */
+.stButton > button:focus,
+div[data-testid="stFormSubmitButton"] > button:focus {
+
+    background-color: #D9DCE1 !important;
+    color: white !important;
+    box-shadow: none !important;
+}
+
+    /* Fundo da aplicação */
+    .stApp {
+        background-color: #F0F2F6;
+    }
+
+    /* Caixa de texto */
+    .stTextInput input,
+    .stTextArea textarea,
+    .stNumberInput input {
+        background-color: #E6E8EB;
+        color: #000000;
+        border: 1px solid #BFC5CC;
+        border-radius: 8px;
+    }
+
+    /* Selectbox */
+    div[data-baseweb="select"] > div {
+        background-color: #E6E8EB;
+        color: #000000;
+        border: 1px solid #BFC5CC;
+        border-radius: 8px;
+    }
+
+    /* Botões */
+    .stButton button {
+        background-color: #D9DCE1;
+        color: black;
+        border-radius: 8px;
+        border: 1px solid #BFC5CC;
+    }
+
+    /* Data Editor */
+    .stDataFrame {
+        background-color: #FFFFFF;
+    }
+    .stTextInput input,
+    .stTextArea textarea {
+    caret-color: black !important;
+    }
+    /* Texto das abas */
+    button[data-baseweb="tab"] {
+        color: black !important;
+        font-weight: bold;
+    }
+    
+    div[data-testid="stTextInput"] label {
+        color: black !important;
+    }
+                
+    /* Aba selecionada */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: black !important;
+    }
+    <style>
+
+/* Botão do formulário */
+div[data-testid="stForm"] button {
+    background-color: #D9DCE1 !important;
+    color: white !important;
+    border: 1px solid #BFC5CC !important;
+}
+
+/* Hover: mantém exatamente a mesma aparência */
+div[data-testid="stForm"] button:hover {
+    background-color: #D9DCE1 !important;
+    color: white !important;
+    border: 1px solid #BFC5CC !important;
+}
+
+/* Clique */
+div[data-testid="stForm"] button:active {
+    background-color: #D9DCE1 !important;
+    color: white !important;
+}
+
+/* Foco */
+div[data-testid="stForm"] button:focus {
+    background-color: #D9DCE1 !important;
+    color: white !important;
+    box-shadow: none !important;
+}
+/* Botões comuns */
+.stButton > button{
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    border: 1px solid #000000 !important;
+    border-radius: 8px;
+}
+
+/* Botões de formulário */
+div[data-testid="stFormSubmitButton"] > button{
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    border: 1px solid #000000 !important;
+    border-radius: 8px;
+}
+
+/* Hover */
+.stButton > button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover{
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    border: 1px solid #000000 !important;
+}
+
+/* Clique */
+.stButton > button:active,
+div[data-testid="stFormSubmitButton"] > button:active{
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+}
+
+/* Foco */
+.stButton > button:focus,
+div[data-testid="stFormSubmitButton"] > button:focus{
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    box-shadow: none !important;
+}
+
+    /* Alvo definitivo para texto preto no botão da barra lateral */
+    section[data-testid="stSidebar"] div.stButton > button,
+    section[data-testid="stSidebar"] div.stButton > button p,
+    section[data-testid="stSidebar"] div.stButton > button span,
+    section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] p {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+def aplicar_tema_claro_user():
+ st.markdown("""
+<style>
+
+/* Fundo geral */
+.stApp{
+    background:white;
+    color:black;
+}
+
+/* Header */
+header[data-testid="stHeader"]{
+    background:white;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"]{
+    background:black !important;
+}
+
+/* Texto da sidebar */
+section[data-testid="stSidebar"] *{
+    color:white !important;
+}
+
+/* Warning */
+div[data-baseweb="notification"]{
+    color:black !important;
+}
+
+div[data-baseweb="notification"] *{
+    color:black !important;
+}
+
+/* Títulos */
+h1, h2, h3, h4, h5, h6{
+    color:black !important;
+}
+
+/* Botões */
+.stButton button{
+    background:white !important;
+    color:black !important;
+    border:1px solid black !important;
+    border-radius:8px;
+}
+
+.stButton button:hover{
+    background:#f5f5f5 !important;
+    color:black !important;
+}
+
+/* Campos de texto */
+.stTextInput input,
+.stTextArea textarea,
+.stNumberInput input{
+    background:white !important;
+    color:black !important;
+    border:1px solid black !important;
+    border-radius:8px;
+    caret-color:black !important;
+}
+
+/* Selectbox */
+div[data-baseweb="select"] > div{
+    background:white !important;
+    color:black !important;
+    border:1px solid black !important;
+}
+
+/* Labels */
+label{
+    color:black !important;
+}
+
+/* Abas */
+button[data-baseweb="tab"]{
+    color:black !important;
+    font-weight:bold;
+}
+section[data-testid="stSidebar"] .stButton > button,
+section[data-testid="stSidebar"] .stButton > button p,
+section[data-testid="stSidebar"] .stButton > button span {
+    color: black !important;
+    -webkit-text-fill-color: black !important;
+    opacity: 1 !important;
+}
+button[data-baseweb="tab"][aria-selected="true"]{
+    color:black !important;
+    border-bottom:2px solid black !important;
+}
+
+/* DataFrame */
+.stDataFrame{
+    background:white;
+}
+
+/* Barra lateral preta */
+section[data-testid="stSidebar"]{
+    background-color: black !important;
+}
+
+/* Todo o texto da barra lateral branco */
+section[data-testid="stSidebar"] *{
+    color: white !important;
+}
+
+/* Ícones da barra lateral */
+section[data-testid="stSidebar"] svg{
+    fill: white !important;
+}
+
+
+</style>
+""", unsafe_allow_html=True)
 def aplicar_tema_escuro():
     return st.markdown( """
             <style>
@@ -65,7 +342,6 @@ def tela_acesso():
         aplicar_tema_escuro()
 
     # 4. O Botão no canto superior esquerdo para alternar o tema
-    col_botao, _ = st.columns([0.2, 0.8])
 
     with col_botao:
         if st.session_state.tema_claro_ativo:
@@ -114,12 +390,20 @@ def tela_acesso():
             nome = st.text_input('Nome')
             email_c = st.text_input('E-mail')
             pass_c = st.text_input('Senha', type='password')
+           
 
             if st.form_submit_button('Cadastrar'):
-                v_nome=util.valida_nome(nome)
-                v_email=util.valida_email(email_c)
-                v_pass=util.valida_senha(pass_c)
+                v_nome = util.valida_nome(nome)
+                if not v_nome:
+                    return
 
+                v_email = util.valida_email(email_c)
+                if not v_email:
+                    return
+
+                v_pass = util.valida_senha(pass_c)
+                if not v_pass:
+                    return
                 if v_nome and v_email and v_pass:
 
                     res = requests.post(f'{api.BASE_URL}/auth/signup', json={'name': nome, 'email': email_c, 'password': pass_c})
@@ -147,58 +431,144 @@ def tela_acesso():
 
 def modulo_projetos():
     st.header('‍Meus Projetos')
-    # [C]REATE
-    with st.expander('➕ Adicionar Projetos Acadêmicos'):
-        nome = st.text_input('Nome do Projeto ')
-        tipo = st.text_input('Tipo do Projeto ')
-        link = st.text_input('Link do Projeto ')
-        descricao = st.text_input('Descrição do Projeto ')
-        Disciplina = st.text_input('ID da disciplina cadastrada')
-        data_inicial = st.date_input('Data de inicial')
-        data_final= st.date_input('Data de Final')
-        if st.button('Cadastrar Projeto'):
-
-            if not nome:
-                st.error('O nome do projeto é obrigatório.')
-                st.rerun()
-           
-            if not Disciplina:
-                st.error('A disciplina é obrigatória.')
-                st.rerun()
-            else:
-                response = api.api_post('projetos', {
-                            'nome': nome,
-                            'tipo': tipo,
-                            'dataInicial': data_inicial.isoformat(),
-                            'dataFinal': data_final.isoformat(),
-                            'link': link,
-                            'descricao': descricao,
-                            'disciplinas_id': Disciplina,
-                            'user_id': st.session_state.get('user_id')
-                            })
-            time.sleep(1)
-            erro=response.status_code
-            if erro == 200:
-                st.success("Projeto cadastrado com sucesso!")
-           
-            elif erro ==400:
-                st.error("Projetos devem ter nomes diferentes.")
-                time.sleep(3)
-                st.rerun()
     
-    
+    disc=api.api_get('disciplinas')
+    if disc:
+        # [C]REATE
+        with st.expander('➕ Adicionar Projetos Acadêmicos'):
+            nome = st.text_input('Nome do Projeto ')
+            tipo = st.selectbox('Tipo', ['Acadêmico', 'Pessoal'])
+            link = st.text_input('Link do Projeto ')
+            descricao = st.text_input('Descrição do Projeto ')
+            data_inicial = st.date_input('Data de inicial')
+            data_final= st.date_input('Data de Final')
+            
+            Disciplina = {p['nome']: p['id'] for p in disc}
+            p_escolhido = st.selectbox('Nome da disciplina',options=list(Disciplina.keys()))
+            id_disciplina = Disciplina[p_escolhido]
+            
+            
 
+            if st.button('Cadastrar Projeto'):
+
+                if not nome:
+                    st.error('O nome do projeto é obrigatório.')
+                    st.rerun()
+            
+                if not Disciplina:
+                    st.error('A disciplina é obrigatória.')
+                    st.rerun()
+                else:
+                    response = api.api_post('projetos', {
+                                'nome': nome,
+                                'tipo': tipo,
+                                'dataInicial': data_inicial.isoformat(),
+                                'dataFinal': data_final.isoformat(),
+                                'link': link,
+                                'descricao': descricao,
+                                'disciplinas_id': id_disciplina,
+                                'user_id': st.session_state.get('user_id'),
+                            
+                                })
+                
+                time.sleep(1)
+                erro=response.status_code
+                if erro == 200:
+                    st.success("Projeto cadastrado com sucesso!")
+            
+                elif erro ==400:
+                    st.error("Projetos devem ter nomes diferentes.")
+                    time.sleep(3)
+                    st.rerun()
         
+            # [R]EAD 
+            dados = api.api_get('projetos')
+            if dados:
+                df = pd.DataFrame(dados)
+                st.subheader('Seus projetos Cadastrados')
+
+                if 'edit_proj' not in st.session_state:
+                    st.session_state.edit_proj = False
+
+                
+                df_editado = st.data_editor(
+                    df[['nome',
+                        'tipo',
+                        'dataInicial',
+                        'dataFinal',  
+                        'link' ,
+                        'descricao',
+                        'disciplinas_id']],
+                    column_config={
+                        'id': st.column_config.TextColumn("ID", disabled=True, width="small"),
+                    },
+                    use_container_width=True,
+                    hide_index=True,
+                    num_rows='dynamic' if st.session_state.edit_proj else None,
+                    disabled=not st.session_state.edit_proj,
+                    key="proj_editor"
+                    )
+                # [U]PDATE & [D]ELETE
+    
+                col_espaco, col_save, col_del, col_cancel = st.columns([0.4, 0.2, 0.2, 0.2])
+                with col_save:
+                    if not st.session_state.edit_proj:
+                        if st.button('Editar ✏️', use_container_width=True):
+                            st.session_state.edit_proj = True
+                            st.rerun()
+                    else:
+                        if st.button('Salvar ✅', use_container_width=True):
+                            erros_validacao = []
+
+                            for _, row in df_editado.iterrows():
+                                    nome= util.limpar_texto(str(row['nome']))
+                                    tipo= util.limpar_texto(str(row['tipo']))
+                                    data_inicial = util.limpar_texto(str(row['dataInicial']))
+                                    data_final = util.limpar_texto(str(row['dataFinal']))
+                                    link = util.limpar_texto(str(row['link']))
+                                    descricao = util.limpar_texto(str(row['descricao']))
+                                    id_disciplinas = util.limpar_texto(str(row['disciplinas_id']))
+
+                                
+                        else:
+                                # Atualiza apenas os que permaneceram
+                                for _, row in df_editado.iterrows():
+                                    if 'id' in row and row['id']:
+                                        api.api_patch('disciplinas', row['id'], {
+                                            'nome': util.limpar_texto(str(row['nome'])),
+                                            'tipo': util.limpar_texto(str(row['tipo'])),
+                                            'dataInicial': util.limpar_texto(str(row['dataInicial'])),
+                                            'dataFinal': util.limpar_texto(str(row['dataFinal'])),
+                                            'link': util.limpar_texto(str(row['link'])),
+                                            'descricao': util.limpar_texto(str(row['descricao'])),
+                                            'disciplinas_id': util.limpar_texto(str(row['disciplinas_id'])),
+                                            'user_id': st.session_state.get('user_id')
+                                        })
+                                st.success('Dados sincronizados!')
+                                st.session_state.edit_prof = False
+                                time.sleep(1)
+                                st.rerun()
+                        if st.button('Cancelar ❌', use_container_width=True):
+                            st.session_state.edit_prof = False
+                            st.rerun()
+            else:
+                st.info('Nenhum projeto cadastrado ainda.')
+            
+        
+    else:
+        st.info('Cadastre uma disciplina primeiro.')
+    
 
 # ------------------------------------------------
-# MÓDULOS CRUD PARA PROFESSORES, DISCIPLINAS
-# E TAREFAS
+# MÓDULOS CRUD PARA PROFESSORES, DISCIPLINAS,
+# PROJETOS E TAREFAS
 # ------------------------------------------------
 
 # GESTÃO DE PROFESSORES
 
 def modulo_professores():
     st.header('‍Meus Professores')
+
     # [C]REATE
     with st.expander('➕ Adicionar Professor'):
         nome = st.text_input('Nome do Professor')
@@ -212,8 +582,13 @@ def modulo_professores():
             elif email and not util.valida_email(email):
                 st.error('E-mail inválido. Se fornecido, deve ser um e-mail válido.')
             else:
-                api.api_post('professores', {'nome': nome, 'email': email if email else None, 'user_id': st.session_state.get('user_id')})
-                st.success('Professor cadastrado com sucesso!')
+                res= api.api_post('professores', {'nome': nome, 'email': email if email else None, 'user_id': st.session_state.get('user_id')})
+                if res.status_code == 200:
+                    st.success('Professor cadastrado com sucesso!')
+                elif res.status_code == 500:
+                    st.error('Não é permitido e-mails já cadastrados.')
+                else:
+                    st.error('Erro ao cadastrar professor.')
                 time.sleep(1)
                 st.rerun()
 
@@ -238,45 +613,28 @@ def modulo_professores():
             disabled=not st.session_state.edit_prof,
             key="prof_editor"
         )
-       # & [U]PDATE & [D]ELETE
-        # Container para os botões no canto inferior direito
-        col_espaco, col_save, col_del, col_cancel = st.columns([0.4, 0.2, 0.2, 0.2])
-        with col_save:
-            if not st.session_state.edit_prof:
-                if st.button('Editar ✏️', use_container_width=True):
-                    st.session_state.edit_prof = True
-                    st.rerun()
+        #[U]PDATE
+        if st.button('Salvar Alterações em Professores'):
+            estado_editor = st.session_state.get("prof_editor", {})
+            linhas_editadas = estado_editor.get("edited_rows", {})
+
+            if linhas_editadas:
+                for idx_linha, alteracoes in linhas_editadas.items():
+                    tarefa_id = int(df_editado.iloc[idx_linha]['id'])
+                    if 'nome' in alteracoes and alteracoes['nome']:
+                        alteracoes['nome'] = str(alteracoes['nome'])
+                    api.api_patch('professores', tarefa_id, alteracoes)
+                st.success('Tarefas atualizadas!')
+                st.rerun()
             else:
-                if st.button('Salvar ✅', use_container_width=True):
-                    erros_validacao = []
-                    # Validação dos dados editados
-                    for index, row in df_editado.iterrows():
-                        nome_val = util.limpar_texto(str(row['nome']))
-                        email_val = util.limpar_texto(str(row['email'])) if row['email'] else ""
+                st.info('Nenhuma alteração detectada.')
 
-                        if not nome_val:
-                            erros_validacao.append(f"Linha {index + 1}: O nome do professor não pode ser vazio.")
-                        if email_val and not util.valida_email(email_val):
-                            erros_validacao.append(f"Linha {index + 1}: E-mail '{email_val}' é inválido.")
-
-                    if erros_validacao:
-                        for erro in erros_validacao:
-                            st.error(erro)
-                    else:
-                        # Atualiza apenas os que permaneceram
-                        for _, row in df_editado.iterrows():
-                            if 'id' in row and row['id']:
-                                api.api_patch('professores', row['id'], {
-                                    'nome': util.limpar_texto(str(row['nome'])),
-                                    'email': util.limpar_texto(str(row['email'])) if row['email'] else None
-                                })
-                        st.success('Dados sincronizados!')
-                        st.session_state.edit_prof = False
-                        time.sleep(1)
-                        st.rerun()
-                if st.button('Cancelar ❌', use_container_width=True):
-                    st.session_state.edit_prof = False
-                    st.rerun()
+        # [D]ELETE
+        id_del = st.number_input('ID da tarefa para remover', min_value=1, step=1)
+        if st.button('Remover professores', type='primary'):
+            api.api_delete('professores', id_del)
+            st.success('Professor removido!')
+            st.rerun()
     else:
         st.info('Nenhum professor cadastrado ainda.')
 
@@ -285,9 +643,8 @@ def modulo_professores():
 def modulo_disciplinas():
     st.header('Minhas Disciplinas')
     profs = api.api_get('professores')
-
     if not profs:
-        st.warning('Cadastre um professor antes de criar disciplinas.')
+        st.warning('Cadastre um professor antes de cadastrar uma disciplina.')
         return
 
     # [C]REATE - Nova Disciplina
@@ -300,7 +657,7 @@ def modulo_disciplinas():
             api.api_post('disciplinas', {'nome': nome_d, 'professores_id': opcoes_p[p_escolhido]})
             st.rerun()
 
-    # [R]EAD & UPDATE
+    # [R]EAD
     discs = api.api_get('disciplinas')
     profs = api.api_get('professores')
     
@@ -309,7 +666,7 @@ def modulo_disciplinas():
         df_d = pd.DataFrame(list(discs))
         df_p = pd.DataFrame(list(profs)) 
 
-        # 🟢 CORREÇÃO DO AVISO AMARELO: Injeta o prof_id esperado pelo resto do sistema
+        # CORREÇÃO DO AVISO AMARELO: Injeta o prof_id esperado pelo resto do sistema
         if 'professores_id' in df_d.columns:
             df_d['prof_id'] = df_d['professores_id']
 
@@ -325,8 +682,9 @@ def modulo_disciplinas():
             # Gerencia o estado de edição
             if 'edit_disc' not in st.session_state:
                 st.session_state.edit_disc = False
+            
+            # [U]PDATE
 
-            # --- MODO EDIÇÃO ATIVO ---
             if st.session_state.edit_disc:
                 st.subheader('Modo de Edição de Disciplinas')
                 df_editado = st.data_editor(
@@ -343,10 +701,9 @@ def modulo_disciplinas():
                     key="disc_editor"
                 )
             
-            # --- MODO VISUALIZAÇÃO LIMPA (O que você queria!) ---
             else:
                 # Filtra apenas as colunas amigáveis ao usuário
-                colunas_para_mostrar = ['nome', 'carga_horaria', 'limite_falta', 'faltas', 'nota', 'dia', 'horario']
+                colunas_para_mostrar = ['id', 'nome', 'carga_horaria', 'limite_falta', 'faltas', 'nota', 'dia', 'horario']
                 colunas_validas = [col for col in colunas_para_mostrar if col in df_view.columns]
                 
                 df_filtrado = df_view[colunas_validas].copy()
@@ -367,55 +724,35 @@ def modulo_disciplinas():
             # --- PAINEL DE BOTÕES DE CONTROLE ---
             mudar_estado = st.session_state.get("disc_editor", {"deleted_rows": []})
             col_espaco, col_save, col_del, col_cancel = st.columns([0.4, 0.2, 0.2, 0.2])
-            
-            with col_save:
-                if not st.session_state.edit_disc:
-                    if st.button('Editar ✏️', use_container_width=True):
-                        st.session_state.edit_disc = True
-                        st.rerun()
+           
+            #[D]ELETE
+            if st.button('Salvar Alterações em Disciplinas  '):
+                estado_editor = st.session_state.get("disc_editor", {})
+                linhas_editadas = estado_editor.get("edited_rows", {})
+
+                if linhas_editadas:
+                    for idx_linha, alteracoes in linhas_editadas.items():
+                        tarefa_id = int(df_editado.iloc[idx_linha]['id'])
+                        if 'nome' in alteracoes and alteracoes['nome']:
+                            alteracoes['nome'] = str(alteracoes['nome'])
+                        api.api_patch('disciplinas', tarefa_id, alteracoes)
+                    st.success('Tarefas atualizadas!')
+                    st.rerun()
                 else:
-                    if st.button('Salvar ✅', use_container_width=True):
-                        erros_validacao = []
-                        
-                        for index, row in df_editado.iterrows():
-                            nome_val = util.limpar_texto(str(row['nome']))
-                            if not nome_val or nome_val == "none":
-                                erros_validacao.append(f"Linha {index + 1}: O nome da disciplina não pode ser vazio.")
+                    st.info('Nenhuma alteração detectada.')
 
-                        if erros_validacao:
-                            for erro in erros_validacao:
-                                st.error(erro)
-                        else:
-                            # Processa exclusões da lixeira
-                            if mudar_estado and mudar_estado.get("deleted_rows"):
-                                for linha_index in mudar_estado["deleted_rows"]:
-                                    id_para_deletar = df_view.iloc[linha_index]["id"]
-                                    api.api_delete('disciplinas', id_para_deletar)
-
-                            # Processa atualizações (PATCH)
-                            for _, row in df_editado.iterrows():
-                                if 'id' in row and row['id']:
-                                    prof_id_val = int(row['professores_id']) if pd.notna(row['professores_id']) else None
-                                    api.api_patch('disciplinas', row['id'], {
-                                        'nome': util.limpar_texto(str(row['nome'])),
-                                        'professores_id': prof_id_val
-                                    })
-                                    
-                            st.success('Dados sincronizados!')
-                            st.session_state.edit_disc = False
-                            time.sleep(1)
-                            st.rerun()
+            # [D]ELETE
+            id_del = st.number_input('ID da tarefa para remover', min_value=1, step=1)
+            if st.button('Remover disciplinas', type='primary'):
+                api.api_delete('disciplinas', id_del)
+                st.success('disciplinas removida!')
+                st.rerun()
                             
-            with col_cancel:
-                if st.session_state.edit_disc:
-                    if st.button('Cancelar ❌', use_container_width=True):
-                        st.session_state.edit_disc = False
-                        st.rerun()
-                        
         else:
-            st.error("As colunas 'id' e 'nome' não foram encontradas na tabela de professores.")
+            st.error("As colunas 'id' e 'nome' não foram encontradas na tabela de disciplinas.")
     else:
         st.info('Nenhuma disciplina cadastrada ainda.')
+
 
 
 # GESTÃO DE TAREFAS ---
@@ -641,50 +978,137 @@ def modulo_dashboard():
 # ------------------------------------------
 
 def main():
-    st.set_page_config(page_title='EduTrack AI', layout='wide')
+    st.set_page_config(
+        page_title="EduTrack AI",
+        layout="wide"
+    )
 
-    # Tenta recuperar o token do cookie NO INÍCIO do script
-    if 'logged_in' not in st.session_state or not st.session_state.logged_in:
-        cookie_token = st.context.cookies.get('auth_token')
+    # -----------------------------
+    # Inicialização do session_state
+    # -----------------------------
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+
+    if "tema_claro_ativo" not in st.session_state:
+        st.session_state.tema_claro_ativo = True
+    if st.session_state.tema_claro_ativo:
+        aplicar_tema_claro_user()
+    else:
+        aplicar_tema_escuro()
+
+    # -----------------------------
+    # Recupera login pelo cookie
+    # -----------------------------
+    if not st.session_state.logged_in:
+        cookie_token = st.context.cookies.get("auth_token")
+
         if cookie_token:
             st.session_state.auth_token = cookie_token
             st.session_state.logged_in = True
             st.session_state.login_time = datetime.now()
 
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
-
-    # Verifica se a sessão expirou (24 horas)
-    if st.session_state.get('logged_in') and 'login_time' in st.session_state:
+    # -----------------------------
+    # Expiração da sessão
+    # -----------------------------
+    if (
+        st.session_state.logged_in
+        and "login_time" in st.session_state
+    ):
         if datetime.now() - st.session_state.login_time > timedelta(hours=24):
             st.session_state.clear()
-            delete_cookie('auth_token')
+            delete_cookie("auth_token")
             st.session_state.logged_in = False
             st.rerun()
 
+    # -----------------------------
+    # Tela de login
+    # -----------------------------
     if not st.session_state.logged_in:
         tela_acesso()
-    else:
-        # Garante que o cookie esteja presente no navegador se estivermos logados
-        if not st.context.cookies.get('auth_token'):
-            set_cookie('auth_token', st.session_state.auth_token)
+        return
 
-        with st.sidebar:
-            st.title('EduTrack AI')
-            menu = st.radio('Gerenciar:', ['Painel Geral', 'Professores', 'Disciplinas', 'Tarefas/Notas', 'Projetos', 'Minhas provas'])
-            st.markdown('---')
-            if st.button('Sair'):
-                st.session_state.clear()
-                delete_cookie('auth_token')
+    # -----------------------------
+    # Garante que o cookie exista
+    # -----------------------------
+    if not st.context.cookies.get("auth_token"):
+        set_cookie("auth_token", st.session_state.auth_token)
+
+    # -----------------------------
+    # Sidebar
+    # -----------------------------
+    with st.sidebar:
+
+        st.title("EduTrack AI")
+
+        menu = st.radio(
+            "Gerenciar:",
+            [
+                "Painel Geral",
+                "Professores",
+                "Disciplinas",
+                "Tarefas/Notas",
+                "Projetos",
+                "Minhas provas",
+            ],
+        )
+
+        st.markdown("---")
+
+        # Botão de tema
+        if st.session_state.tema_claro_ativo:
+
+            if st.button(
+                "🌙 Tema Escuro",
+                use_container_width=True,
+            ):
+                st.session_state.tema_claro_ativo = False
+                st.session_state.tema_escuro_ativo = True
                 st.rerun()
 
-        match menu:
-           case 'Projetos': modulo_projetos()
-           case 'Painel Geral': modulo_dashboard()
-           case 'Professores': modulo_professores()
-           case 'Disciplinas': modulo_disciplinas()
-           case 'Tarefas/Notas': modulo_tarefas()
-           case 'Minhas provas': modulo_provas()
+        else:
+
+            if st.button(
+                "☀️ Tema Claro",
+                use_container_width=True,
+            ):
+                st.session_state.tema_escuro_ativo = False              
+                st.session_state.tema_claro_ativo = True
+                st.rerun()
+
+        st.markdown("---")
+
+        # Logout
+        if st.button(
+            "Sair",
+            use_container_width=True,
+        ):
+            st.session_state.clear()
+            delete_cookie("auth_token")
+            st.rerun()
+
+    # -----------------------------
+    # Navegação
+    # -----------------------------
+    match menu:
+
+        case "Painel Geral":
+            modulo_dashboard()
+
+        case "Disciplinas":
+            modulo_disciplinas()
+
+        case "Professores":
+            modulo_professores()
+
+        case "Projetos":
+            modulo_projetos()
+
+        case "Tarefas/Notas":
+            modulo_tarefas()
+
+
+        case "Minhas provas":
+            modulo_provas()
            
 
 if __name__ == "__main__":
