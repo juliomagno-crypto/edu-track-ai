@@ -58,7 +58,7 @@ def valida_nome(nome):
     if espacos < 1:
         st.error('O nome deve conter pelo menos um sobrenome, coloque seu nome completo.')
         return
-    if espacos > 15:
+    if espacos > 15:            
         st.error('O nome não pode conter mais de 15 espaços.')
         return 
     return True
@@ -106,3 +106,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+            
